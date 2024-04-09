@@ -1,4 +1,5 @@
 import requests
+import sys
 import json
 import time 
 import csv
@@ -58,9 +59,14 @@ def get_size(size_arr, atributes):
             pass
     return ''
 
-sub_header = {'sub_header': 'sub_header'} # get_sub_header()
-sufix = 'e0oqftf0gcFQ' #get_path()
-#sufix = get_path(sub_header['url'])
+#sub_header = {'sub_header': 'sub_header'} # get_sub_header()
+#sufix = 'e0oqftf0gcFQ' #get_path()
+sub_header = get_sub_header()
+sufix = get_path(sub_header['url'])
+
+print(sufix)
+time.sleep(5)
+
 
 headers = {
     'sec-ch-ua': '"Chromium";v="122", "Not(A:Brand";v="24", "Brave";v="122"',
@@ -82,27 +88,8 @@ params = {
     'catalogId': '1004',
     'from': '0',
     'sort': 'byRelevance',
-    'groupId': '288',
+    'groupId': '2515',
 }
-
-session = requests.Session()
-response = session.get('https://www.chewy.com/', headers=headers)
-cookies = { 'KP_UIDz-ssn': f"{response.cookies.get_dict()['KP_UIDz-ssn']};" }
-
-index = 0
-
-head_lines = False
-f_name = 'chewy_com_demo.csv'
-
-response = requests.get('https://www.chewy.com/plp/api/search', params=params, cookies=cookies, headers=headers)
-json_data = json.loads(response.text)
-total = math.ceil(float(json_data['recordSetTotal']) / 36)
-pageStr = '0-10'
-pageInit = int(pageStr.split('-')[0])
-pageEnd = int(pageStr.split('-')[1])
-
-pageInit = 0 #int(math.ceil((total / 100 * pageInit)))
-pageEnd = 1 #int(math.ceil((total / 100 * pageEnd)))
 
 def get_product_links(params, cookies, headers):
     max_try = 5
@@ -122,17 +109,18 @@ def get_product_links(params, cookies, headers):
 
     return product_links
 
-def get_product_json_data(url):
+def get_product_json_data(url, cookies, headers):
     max_try = 5
-    detail_json = None
+    detail_prd_json = None
     while max_try > 0:
         try:
-            response = requests.get(url, cookies=cookies, headers=headers)
-            detail_json = json.loads(response.content)
+            response_prd_json = requests.get(url, cookies=cookies, headers=headers)
+            detail_prd_json = json.loads(response_prd_json.content)
             max_try = 0
         except:
-            time.sleep(5)
-    return detail_json
+            time.sleep(3)
+            max_try = max_try - 1
+    return detail_prd_json
 
 def log(message):
     print(f'[LOG] {message}')
@@ -217,7 +205,7 @@ def get_sizes_list(detail_json):
     short_sizes = {}
     try:
         attr_sizes = [detail_json['pageProps']['__APOLLO_STATE__'][product] for product in detail_json['pageProps']['__APOLLO_STATE__'] if "Attribute:" in product]
-        attr_sizes = [attr for attr in attr_sizes if attr['name'] in ['Sizes', 'Count']]
+        attr_sizes = [attr for attr in attr_sizes if attr['name'] in ['Size', 'Count']]
         for size in attr_sizes:
             for value in size['values']:
                 attr_json = json.loads(value['__ref'].replace('AttributeValue:',''))
@@ -273,7 +261,10 @@ def get_product_general_info(detail_json):
 def get_product_details(detail_json):
     try:
         product_items = get_product_items(detail_json)
-        return [key for key  in [main for main in product_items] if 'product' in key][0]
+        if product_items == None:
+            return None
+        details =  [key for key  in [main for main in product_items] if 'product' in key][0]
+        return details
     except:
         return None
 
@@ -325,186 +316,208 @@ def get_promotion(detail_json):
     except:
         return None
 
+def isConflitPromo(data):
+    if data['topPromotion'] in data['autoshipBuyboxOverrideConflictingPromos'] and data['topPromotion'] != None and data['autoshipBuyboxOverrideConflictingPromos'] != None:
+        return True
+    return False
 
-with open(f_name, 'a') as f:
-    for i in range(pageInit,pageEnd):
-        params['from'] = f'{i * 36}'
-        products_links_list = get_product_links(params, cookies, headers)
+def get_description_attribute(data, attribute_name):
+    try:
+        return data['descriptionAttributes'][attribute_name].replace('\"',"")
+    except:
+        return ''
 
-        for product_url in products_links_list[:1]:
-            try:
-                json_backend_url = f'https://www.chewy.com/_next/data/chewy-pdp-ui-{sufix}/en-US/{product_url.replace("https://www.chewy.com/", "")}.json'
-                detail_json = get_product_json_data(json_backend_url)
-                if detail_json == None:
-                    log(f'detail_json None in json url: {json_backend_url}')
-                    continue # skip this product and go to the next
+def main(category, perc):
+    session = requests.Session()
+    response = session.get('https://www.chewy.com/', headers=headers)
+    cookies = { 'KP_UIDz-ssn': f"{response.cookies.get_dict()['KP_UIDz-ssn']};" }
 
-                product_general_info = get_product_general_info(detail_json)
-                if product_general_info == None:
-                    log(f'product_general_info None in json url: {json_backend_url}')
-                    continue # skip this product and go to the next
+    head_lines = False
+    f_name = 'chewy_com_demo.csv'
 
-                product_detail = get_product_details(detail_json)
-                if product_detail == None:
-                    log(f'product_detail None in json url: {json_backend_url}')
-                    continue # skip this product and go to the next
+    response = requests.get('https://www.chewy.com/plp/api/search', params=params, cookies=cookies, headers=headers)
+    json_data = json.loads(response.text)
+    total = math.ceil(float(json_data['recordSetTotal']) / 36)
+    pageStr = perc
+    pageInit = int(pageStr.split('-')[0])
+    pageEnd = int(pageStr.split('-')[1])
 
-                product_items = get_product_items(detail_json)
-                if product_items == None:
-                    log(f'product_items None in json url: {json_backend_url}')
-                    continue # skip this product and go to the next
+    pageInit = int(math.ceil((total / 100 * pageInit)))
+    pageEnd = int(math.ceil((total / 100 * pageEnd)))
 
-                autoshipFirstTimeDiscountPercent     = float(get_feature_flags(detail_json, 'autoshipFirstTimeDiscountPercent', 0))
-                autoshipFirstTimeDiscountMaxSavings  = float(get_feature_flags(detail_json, 'autoshipFirstTimeDiscountMaxSavings',0))
-                short_sizes = get_sizes_list(detail_json)    
-                breadcrumb = get_breadcrumb(detail_json) 
-                promotion = get_promotion(detail_json)
+    with open(f_name, 'a') as f:
+        for i in range(pageInit,pageEnd):
+            params['from'] = f'{i * 36}'
+            params['groupId'] = f'{category}'
+            products_links_list = get_product_links(params, cookies, headers)
 
-                data = {
-                    "slug": product_general_info['slug'],
-                    'manufacturerName': product_general_info['manufacturerName'], 
-                    "promotion": '' if promotion == None else promotion['shortDescription'],
-                    "topHeadlinePromotion": product_detail['topHeadlinePromotion'],
-                    "autoshipFirstTimeDiscountPercent": autoshipFirstTimeDiscountPercent,
-                    'autoPrice': product_detail['autoshipPrice'],
-                    "isAutoshipAllowed": product_detail['isAutoshipAllowed'],
-                    "autoshipDiscountPct": product_detail['autoshipDiscountPct'],
-                    "autoshipFirstTimeDiscountMaxSavings": autoshipFirstTimeDiscountMaxSavings,
-                    "rating": product_general_info['rating'],
-                    "ratingCount": product_general_info['ratingCount'],
-                    "recommendedRatingCount": product_general_info['recommendedRatingCount'],
-                    "recommendedRatingPercent": product_general_info['recommendedRatingPercent'],
-                    "description": product_detail['description'],
-                    "isHealthCare": product_detail['isHealthCare'],
-                    "maxQuantity": product_detail['maxQuantity'],
-                    "isPersonalized": product_detail['isPersonalized'],
-                    "isVetDiet": product_detail['isVetDiet'],
-                    "isSinglePill": product_detail['isSinglePill'],
-                    "strikeThroughPrice": product_detail['strikeThroughPrice'],
-                    "strikeThroughPriceType": product_detail['strikeThroughPriceType'],
-                    "strikeThroughSavings": product_detail['strikeThroughSavings'],
-                    "strikeThroughSavingsPct": product_detail['strikeThroughSavingsPct'],
-                    "shippingMessage":product_detail['shippingMessage'],
-                    "shippingTimeframe":product_detail['shippingTimeframe'],
-                    "dropshipMessage":product_detail['dropshipMessage'],
-                    "rxShippingMessage":product_detail['rxShippingMessage'],
-                    "isAutoshipAllowed":product_detail['isAutoshipAllowed'],
-                    "isFrozen":product_detail['isFrozen'],
-                    "isFresh":product_detail['isFresh'],
-                    "isBundle":product_detail['isBundle'],
-                    "dimensions":product_detail['dimensions'],
-                    "weight":product_detail['weight'],
-                    "isRefrigerated":product_detail['isRefrigerated'],
-                    "isRestricted":product_detail['isRefrigerated'],
-                }
+            for product_url in products_links_list:
                 try:
-                    data["topPromotion"] = product_detail['topPromotion']['__ref'].split(':')[1]
-                except:
-                    data["topPromotion"] = None
+                    json_backend_url = f'https://www.chewy.com/_next/data/chewy-pdp-ui-{sufix}/en-US/{product_url.replace("https://www.chewy.com/", "")}.json'
+                    detail_json = get_product_json_data(json_backend_url, cookies, headers)
+                    time.sleep(1/2)
+                    if detail_json == None:
+                        log(f'detail_json None in json url: {json_backend_url}')
+                        continue # skip this product and go to the next
 
-                for product in product_items:
-                    attribute_values_key = [key for key in product.keys() if 'attributeValues' in key][0]
-                    try:
-                        try:
-                            images = [image for _, image in product['fullImage'].items() if image != 'Image'][1]
-                        except:
-                            images = ''
-                        complete = {
-                            "entryID": product['entryID'],
-                            "name": product['name'],
-                            "attributeValues": product[attribute_values_key], 
-                            "url": f"{'/'.join(product_url.split('/')[:-1])}/{product['entryID']}",
-                            "advertisedPrice": product['advertisedPrice'].replace('$',''),
-                            "autoShipDiscountPercent": detail_json['pageProps']['__APOLLO_STATE__']['ROOT_QUERY']['pdp']['featureToggles']['autoshipFirstTimeDiscountPercent'],
-                            "mapSavings": product_detail['mapSavings'],                            
-                            "descriptionAttributes": {},
-                            "mapEnforced": product_detail['mapEnforced'],                            
-                            "autoshipBuyboxOverrideConflictingPromos": detail_json['pageProps']['__APOLLO_STATE__']['ROOT_QUERY']['pdp']['featureToggles']['autoshipBuyboxOverrideConflictingPromos'],
-                            "autoshipSuppressFTASList": detail_json['pageProps']['__APOLLO_STATE__']['ROOT_QUERY']['pdp']['featureToggles']['autoshipSuppressFTASList'],
-                           "inStock": product['inStock'],
-                            "gtin": f"{str(product_detail['gtin'])}" if product_detail['gtin'] != None else '000000000',
-                            "images" : images, 
-                            "partNumber": product['partNumber'],
-                            "isGiftCard": product['isGiftCard'],
-                            "isPrescription": product['isPrescription'],
-                            "isPublished": product['isPublished'],
-                            "isUnavailable": product['isUnavailable'],
-                            "perUnitPrice": product['perUnitPrice'],
-                            "unitOfMeasure": product['unitOfMeasure'],
-                        }
-                        for attribute in product_detail['descriptionAttributes']:
-                            complete['descriptionAttributes'][f"{attribute['name']}"] = attribute['values'][0]['__ref'].split(':')[-1].split('}')[0] 
+                    product_items = get_product_items(detail_json)
+                    if product_items == None:
+                        log(f'product_items None in json url: {json_backend_url}')
+                        continue # skip this product and go to the next
 
-                        complete.update(data)
-                        complete["firstTimeAutoshipPrice"] = useFirstTimeAutoshipDiscount(complete['advertisedPrice'], complete['autoShipDiscountPercent'], complete['autoshipFirstTimeDiscountMaxSavings'])
-
+                    for product in product_items:
+                        product_active_url = f"{('/').join(product_url.split('/')[:-1])}/{product['entryID']}"
+                        json_backend_url = f'https://www.chewy.com/_next/data/chewy-pdp-ui-{sufix}/en-US/{product_active_url.replace("https://www.chewy.com/", "")}.json'
+                        detail_json = get_product_json_data(json_backend_url, cookies, headers)
+                        time.sleep(1/2)
                         
-                        isConflitPromo = False
-                        if complete['topPromotion'] in complete['autoshipBuyboxOverrideConflictingPromos'] and complete['topPromotion'] != None and complete['autoshipBuyboxOverrideConflictingPromos'] != None:
-                            isConflitPromo = True
-                        complete['isConflitPromo']  = isConflitPromo
-                        mapRestricted  = complete['mapEnforced']  and complete['mapSavings'] != None
-                        complete['mapRestricted'] = mapRestricted
-                        isFTASRepressedSku = int(complete['partNumber']) in complete['autoshipSuppressFTASList'] if complete['autoshipSuppressFTASList'] != None else False
-                        complete['isFTASRepressedSku'] = isFTASRepressedSku
-                        display = True
-                        if complete['isAutoshipAllowed'] == False:
-                            complete['firstTimeAutoshipPrice'] = None
-                        else:
-                            display = not (complete['topHeadlinePromotion'] == None and complete['isConflitPromo'] == False and complete['mapRestricted'] == False and complete['isFTASRepressedSku'] == False)
-                            if display == False:
-                                complete['firstTimeAutoshipPrice'] = complete['advertisedPrice']    
+                        product_general_info = get_product_general_info(detail_json)
+                        if product_general_info == None:
+                            log(f'product_general_info None in json url: {json_backend_url}')
+                            continue # skip this product and go to the next
 
-                        #print(short_sizes['11635430'])
 
-                        to_print={
-                            'Index': index, 
-                            'Product Code': complete['entryID'],
-                            'Sku': complete['partNumber'],
-                            'url': complete['url'],
-                            'Product Name': complete['name'],
-                            'Price': complete['advertisedPrice'],
-                            'Stock': 'Instock' if complete['inStock'] else 'Out of Stock', 
-                            'Breadcrumb': breadcrumb,
-                            'Shipping': 0 if float(complete['advertisedPrice']) > 49 else '4.95',
-                            'Image': complete['images'],
-                            'Brand': complete['manufacturerName'],
-                            'generic_name': complete['descriptionAttributes']['Generic Name'],
-                            'product_form': complete['descriptionAttributes']['Product Form'],
-                            'drug_type': complete['descriptionAttributes']['Drug Type'],
-                            'prescription_item': 'yes' if complete['isPrescription'] else 'no',
-                            'autoship': complete['firstTimeAutoshipPrice'],
-                            'promotional_text': promotion['shortDescription'],
-                            'promotional_information:': sub_header['sub_header'],
-                            'pack_size': get_size(short_sizes, complete['attributeValues']),
-                            'msrp': complete['strikeThroughPrice'].replace('$','') if complete['strikeThroughPrice'] != None else '',
-                            'gtin': f"0000000000000{complete['gtin']}"[-14:],
+                        autoshipFirstTimeDiscountPercent     = float(get_feature_flags(detail_json, 'autoshipFirstTimeDiscountPercent', 0))
+                        autoshipFirstTimeDiscountMaxSavings  = float(get_feature_flags(detail_json, 'autoshipFirstTimeDiscountMaxSavings',0))
+                        short_sizes = get_sizes_list(detail_json)    
+                        breadcrumb = get_breadcrumb(detail_json) 
+                        promotion = get_promotion(detail_json)
+                        product_detail = get_product_details(detail_json)
+
+                        if product_detail == None:
+                            log(f'product_detail None in json url: {json_backend_url}')
+                            continue # skip this product and go to the next
+
+                        data = {
+                            "slug": product_general_info['slug'],
+                            'manufacturerName': product_general_info['manufacturerName'], 
+                            "promotion": '' if promotion == None else promotion['shortDescription'] if 'shortDescription' in promotion.keys() else None,
+                            "autoshipFirstTimeDiscountPercent": autoshipFirstTimeDiscountPercent,
+                            "isAutoshipAllowed": None if 'isAutoshipAllowed' not in product_detail.keys() else product_detail['isAutoshipAllowed'],
+                            "autoshipDiscountPct": None if 'autoshipDiscountPct' not in product_detail.keys() else product_detail['autoshipDiscountPct'],
+                            "autoshipFirstTimeDiscountMaxSavings": autoshipFirstTimeDiscountMaxSavings,
+                            "strikeThroughPrice": None if 'strikeThroughPrice' not in product_detail.keys() else product_detail['strikeThroughPrice'],
+                            "shippingMessage": None if 'shippingMessage'  not in product_detail.keys() else product_detail['shippingMessage'],
+                            "isAutoshipAllowed": None if 'isAutoshipAllowed' not in product_detail.keys() else product_detail['isAutoshipAllowed'],
                         }
-                        print(json.dumps(to_print, indent=4))
-                        writer = csv.DictWriter(f, fieldnames=to_print)
+                        try:
+                            data["topPromotion"] = product_detail['topPromotion']['__ref'].split(':')[1]
+                        except:
+                            data["topPromotion"] = None
 
-                        if head_lines == False:
-                            head_lines = True
-                            writer.writeheader()
-                        writer.writerow(to_print)
-                        if complete['firstTimeAutoshipPrice'] != None:
-                            to_print['Product Name'] = f"{complete['name']} - Autosend"
-                            to_print['Price'] = complete['firstTimeAutoshipPrice']
-                            print('--------')
+                        try:
+                            data["topHeadlinePromotion"] = product_detail['topHeadlinePromotion']
+                        except:
+                            data['topHeadlinePromotion'] = None
+
+                        attribute_values_key = [key for key in product.keys() if 'attributeValues' in key][0]
+                        
+                        try:
+                            try:
+                                images = [image for _, image in product['fullImage'].items() if image != 'Image'][1]
+                            except:
+                                images = ''
+                            data.update({
+                                "entryID": product['entryID'],
+                                "name": product['name'],
+                                "attributeValues": product[attribute_values_key], 
+                                "url": product_active_url,
+                                "advertisedPrice": product['advertisedPrice'].replace('$',''),
+                                "autoShipDiscountPercent": get_feature_flags(detail_json, 'autoshipFirstTimeDiscountPercent'),
+                                "mapSavings": None if 'mapSavings' not in product_detail.keys() else product_detail['mapSavings'],                            
+                                "descriptionAttributes": {},
+                                "mapEnforced": product_detail['mapEnforced'],                            
+                                "autoshipBuyboxOverrideConflictingPromos": get_feature_flags(detail_json, 'autoshipBuyboxOverrideConflictingPromos'),
+                                "autoshipSuppressFTASList": get_feature_flags(detail_json, 'autoshipSuppressFTASList'),
+                                "inStock": product['inStock'],
+                                "gtin": f"{str(product['gtin'])}" if product['gtin'] != None else '000000000',
+                                "images" : images, 
+                                "partNumber": product['partNumber'],
+                                "isPrescription": product['isPrescription'],
+                            })
+
+                            for attribute in product_detail['descriptionAttributes']:
+                                data['descriptionAttributes'][f"{attribute['name']}"] = attribute['values'][0]['__ref'].split(':')[-1].split('}')[0] 
+
+                            data["firstTimeAutoshipPrice"] = useFirstTimeAutoshipDiscount(data['advertisedPrice'], data['autoShipDiscountPercent'], data['autoshipFirstTimeDiscountMaxSavings'])
+                            data['isConflitPromo']  = isConflitPromo(data)
+                            mapRestricted  = data['mapEnforced']  and data['mapSavings'] != None
+                            data['mapRestricted'] = mapRestricted
+                            isFTASRepressedSku = int(data['partNumber']) in data['autoshipSuppressFTASList'] if data['autoshipSuppressFTASList'] != None else False
+                            data['isFTASRepressedSku'] = isFTASRepressedSku
+
+                            display = True
+                            if data['isAutoshipAllowed'] == False:
+                                data['firstTimeAutoshipPrice'] = None
+                            else:
+                                display = not (data['topHeadlinePromotion'] == None and data['isConflitPromo'] == False and data['mapRestricted'] == False and data['isFTASRepressedSku'] == False)
+                                if display == False:
+                                    data['firstTimeAutoshipPrice'] = data['advertisedPrice']    
+
+
+                            to_print={
+                                'Product Code': data['entryID'],
+                                'Sku': data['partNumber'],
+                                'url': data['url'],
+                                'Product Name': data['name'],
+                                'Price': data['advertisedPrice'],
+                                'Stock': 'Instock' if data['inStock'] else 'Out of Stock', 
+                                'Breadcrumb': breadcrumb,
+                                'Shipping': 0 if float(data['advertisedPrice']) > 49 else '4.95',
+                                'Image': data['images'],
+                                'Brand': data['manufacturerName'],
+                                'generic_name': get_description_attribute(data,'Generic Name'),
+                                'product_form': get_description_attribute(data,'Product Form'),
+                                'drug_type': get_description_attribute(data,'Drug Type'),
+                                'prescription_item': 'yes' if data['isPrescription'] else 'no',
+                                'autoship': data['firstTimeAutoshipPrice'],
+                                'promotional_text': data['promotion'],
+                                'promotional_information:': sub_header['sub_header'],
+                                'pack_size': get_size(short_sizes, data['attributeValues']),
+                                'msrp': data['strikeThroughPrice'].replace('$','') if data['strikeThroughPrice'] != None else '',
+                                'gtin': f"0000000000000{data['gtin']}"[-14:],
+                            }
                             print(json.dumps(to_print, indent=4))
+                            writer = csv.DictWriter(f, fieldnames=to_print)
+
+                            if head_lines == False:
+                                head_lines = True
+                                writer.writeheader()
                             writer.writerow(to_print)
-                        #print(f"{index}: {item['href']}: {product['name']}")
-                    except Exception as e:
-                        print('Error A', e)
-                        pass
-            except KeyboardInterrupt:
-                exit(0)
-            except Exception as e:
-                print('Error B', e)
-            print('--------')
-    time.sleep(2)
+                            if data['firstTimeAutoshipPrice'] != None:
+                             to_print['Product Name'] = f"{data['name']} - Autosend"
+                             to_print['Price'] = data['firstTimeAutoshipPrice']
+                             print('--------')
+                             print(json.dumps(to_print, indent=4))
+                             writer.writerow(to_print)
+                        except Exception as e:
+                            print('Error A', e)
+                            pass
+                except KeyboardInterrupt:
+                    exit(0)
+                except Exception as e:
+                    print('Error B', e)
+                print('--------')
+        time.sleep(2)
 # start time = 02:15
 current_time = now.strftime("%H:%M:%S")
+categories = {
+    'Dog': '288',
+    'Cat': '325',
+    'Fish': '885',
+    'Bird': '941',
+    'SmallPet': '977',
+    'Reptile': '1025',
+    'FarmAnimal': '8403',
+    'Horse': '1663',
+    'Pharmacy': '2515',
+}
+
+if __name__ == '__main__':
+    category = 'Dog' if sys.argv[1] == None else sys.argv[1]
+    perc = '0-100' if sys.argv[2] == None else sys.argv[2]
+    print(categories[category], perc)
+    main(categories[category], perc)
 print("Start Time =", start_time)
 print("Current Time =", current_time)
 
