@@ -347,7 +347,6 @@ def main(category, perc, f_name):
 
     print('ALL DONE, STARTING CRAWLER NOW...\n\n')
     time.sleep(5)
-
     with open(f_name, 'a') as f:
         for i in range(pageInit,pageEnd):
             params['from'] = f'{i * 36}'
