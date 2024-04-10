@@ -30,5 +30,10 @@ You can run `python app.py -h` to see the helper menu
   
   In this case the file name will be `fish_chewy_0-50_YY-MM-DD-HH-mm-ss.csv
 
+### Result demo
+
+![image](https://github.com/cleber-silva-web-scraping/python-requests-chewy/assets/6031795/c7c5aa8d-fd5e-43ee-bfda-3c76692c987b)
+
+
 
 
