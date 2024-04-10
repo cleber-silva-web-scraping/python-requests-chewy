@@ -1,5 +1,6 @@
 import requests
 import sys
+import argparse
 import json
 import time 
 import csv
@@ -58,14 +59,6 @@ def get_size(size_arr, atributes):
         except:
             pass
     return ''
-
-#sub_header = {'sub_header': 'sub_header'} # get_sub_header()
-#sufix = 'e0oqftf0gcFQ' #get_path()
-sub_header = get_sub_header()
-sufix = get_path(sub_header['url'])
-
-print(sufix)
-time.sleep(5)
 
 
 headers = {
@@ -327,23 +320,33 @@ def get_description_attribute(data, attribute_name):
     except:
         return ''
 
-def main(category, perc):
+def main(category, perc, f_name):
+    print('\n\nGETING WEB SITE BUILD PATH JUST WAIT PLEASE...')
+    sub_header = get_sub_header()
+    sufix = get_path(sub_header['url'])
+
     session = requests.Session()
     response = session.get('https://www.chewy.com/', headers=headers)
     cookies = { 'KP_UIDz-ssn': f"{response.cookies.get_dict()['KP_UIDz-ssn']};" }
 
     head_lines = False
-    f_name = 'chewy_com_demo.csv'
 
+    params['groupId'] = f'{category}'
     response = requests.get('https://www.chewy.com/plp/api/search', params=params, cookies=cookies, headers=headers)
     json_data = json.loads(response.text)
     total = math.ceil(float(json_data['recordSetTotal']) / 36)
     pageStr = perc
     pageInit = int(pageStr.split('-')[0])
     pageEnd = int(pageStr.split('-')[1])
-
     pageInit = int(math.ceil((total / 100 * pageInit)))
     pageEnd = int(math.ceil((total / 100 * pageEnd)))
+    if '-100' in pageStr:
+        pageEnd = pageEnd + 1
+
+    print(f'Category: {category}\nInitial Page: {pageInit}\nLast Page: {pageEnd}\nFile Name: {f_name}\n Site build {sufix}')
+
+    print('ALL DONE, STARTING CRAWLER NOW...\n\n')
+    time.sleep(5)
 
     with open(f_name, 'a') as f:
         for i in range(pageInit,pageEnd):
@@ -358,7 +361,15 @@ def main(category, perc):
                     time.sleep(1/2)
                     if detail_json == None:
                         log(f'detail_json None in json url: {json_backend_url}')
-                        continue # skip this product and go to the next
+                        sub_header = get_sub_header()
+                        sufix = get_path(sub_header['url'])
+                        session = requests.Session()
+                        response = session.get('https://www.chewy.com/', headers=headers)
+                        cookies = { 'KP_UIDz-ssn': f"{response.cookies.get_dict()['KP_UIDz-ssn']};" }
+                        json_backend_url = f'https://www.chewy.com/_next/data/chewy-pdp-ui-{sufix}/en-US/{product_url.replace("https://www.chewy.com/", "")}.json'
+                        detail_json = get_product_json_data(json_backend_url, cookies, headers)
+                        if detail_json == None:
+                            continue # skip this product and go to the next
 
                     product_items = get_product_items(detail_json)
                     if product_items == None:
@@ -500,24 +511,39 @@ def main(category, perc):
                 print('--------')
         time.sleep(2)
 # start time = 02:15
-current_time = now.strftime("%H:%M:%S")
 categories = {
-    'Dog': '288',
-    'Cat': '325',
-    'Fish': '885',
-    'Bird': '941',
-    'SmallPet': '977',
-    'Reptile': '1025',
-    'FarmAnimal': '8403',
-    'Horse': '1663',
-    'Pharmacy': '2515',
+    'dog': '288',
+    'cat': '325',
+    'fish': '885',
+    'bird': '941',
+    'small-pet': '977',
+    'reptile': '1025',
+    'farm-animal': '8403',
+    'horse': '1663',
+    'pharmacy': '2515',
 }
 
 if __name__ == '__main__':
-    category = 'Dog' if sys.argv[1] == None else sys.argv[1]
-    perc = '0-100' if sys.argv[2] == None else sys.argv[2]
-    print(categories[category], perc)
-    main(categories[category], perc)
-print("Start Time =", start_time)
-print("Current Time =", current_time)
+    parser=argparse.ArgumentParser()
+    file_time = now.strftime("%y%m%d%H%M%S")
+
+    parser.add_argument("--category",  "-c", help="[REQUIRED] Category can be dog, cat, fish, bird, small-pet, reptile, farm-animal, horse or pharmacy.")
+    parser.add_argument("--percentage", "-p", help='[OPTIONAL] Percentual of pages can be 0-25, 25-50, 10-20 or any combinations between 0 and 100. Default 0-100.', type=str, default='0-100')
+    parser.add_argument("--file", "-f", help='[OPTIONAL] File name(csv) to ouput result. Default [category]_chewy_[percentage]_YY-MM-DD-HH-mm-ss.csv', type=str)
+    args=parser.parse_args()
+    if args.category == None:
+        print(parser.format_help())
+        exit(0)
+
+    if args.category not in categories.keys():
+        print(f'\n\n\nInvalid param "{args.category}"\n\n')
+        print(parser.format_help())
+        exit(0)
+    if args.file == None:
+        args.file=f"{args.category}_chewy_{args.percentage}_{file_time}.csv"
+
+    main(categories[args.category], args.percentage, args.file)
+    print("Start Time =", start_time)
+    current_time = now.strftime("%H:%M:%S")
+    print("Current Time =", current_time)
 
