@@ -24,6 +24,18 @@ except:
     time.sleep(5)
     exit(0)
 
+firefoxOptions = Options()
+firefoxOptions.add_argument("--headless")
+driver = webdriver.Firefox(options=firefoxOptions)
+driver.get('https://www.google.com')
+
+time.sleep(5)
+print('SELENIUM OK')
+print('SELENIUM OK')
+print('SELENIUM OK')
+print('SELENIUM OK')
+
+
 now = datetime.now()
 start_time = now.strftime("%H:%M:%S")
 logging.basicConfig(filename='Error.log', filemode='w', format='[%(asctime)s][%(levelname)]: %(message)s')
