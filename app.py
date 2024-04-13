@@ -13,6 +13,16 @@ from datetime import datetime
 from selenium.webdriver.firefox.options import Options
 from base64 import b64encode
 from selenium.webdriver.common.proxy import Proxy, ProxyType
+import selenium
+
+print('\n\n\n')
+try:
+    print(f'Selenium version {selenium.__version__}')
+    time.sleep(5)
+except:
+    print('Selenium not installer')
+    time.sleep(5)
+    exit(0)
 
 now = datetime.now()
 start_time = now.strftime("%H:%M:%S")
