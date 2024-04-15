@@ -197,7 +197,7 @@ Other categories will be split for 5%.
     ### The result in folder:
     ![image](https://github.com/cleber-silva-web-scraping/python-requests-chewy/assets/6031795/c14ac790-68f3-452b-94d2-3e9845fc8b9f)
 
-    ### Files per category
+    ### Files per category `[category]_all.csv`
     ![image](https://github.com/cleber-silva-web-scraping/python-requests-chewy/assets/6031795/0ee6d8ef-6577-4103-a991-2e063ead877a)
 
 
