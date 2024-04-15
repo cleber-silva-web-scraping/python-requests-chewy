@@ -1,6 +1,4 @@
 import requests
-import logging
-import sys
 import traceback
 import argparse
 import json
@@ -11,34 +9,10 @@ from selenium import webdriver
 from selenium.webdriver.common.by import By
 from datetime import datetime
 from selenium.webdriver.firefox.options import Options
-from base64 import b64encode
-from selenium.webdriver.common.proxy import Proxy, ProxyType
-import selenium
-
-print('\n\n\n')
-try:
-    print(f'Selenium version {selenium.__version__}')
-    time.sleep(5)
-except:
-    print('Selenium not installer')
-    time.sleep(5)
-    exit(0)
-
-firefoxOptions = Options()
-firefoxOptions.add_argument("--headless")
-driver = webdriver.Firefox(options=firefoxOptions)
-driver.get('https://www.google.com')
-
-time.sleep(5)
-print('SELENIUM OK')
-print('SELENIUM OK')
-print('SELENIUM OK')
-print('SELENIUM OK')
 
 
 now = datetime.now()
 start_time = now.strftime("%H:%M:%S")
-logging.basicConfig(filename='Error.log', filemode='w', format='[%(asctime)s][%(levelname)]: %(message)s')
 
 proxy_host = "brd.superproxy.io"
 proxy_port = "22225"
@@ -91,9 +65,7 @@ def get_path(url):
 
 def useFirstTimeAutoshipDiscount(advertisedPrice, autoshipFirstTimeDiscountPercent, autoshipFirstTimeDiscountMaxSavings):
     if advertisedPrice == None:
-        return
-    print(advertisedPrice)
-    print(autoshipFirstTimeDiscountPercent)
+        return None
     discountedPrice = float(advertisedPrice) * (1 - (float(autoshipFirstTimeDiscountPercent) / 100))
     maxSavingsPrice = float(advertisedPrice) - float(autoshipFirstTimeDiscountMaxSavings)
     if maxSavingsPrice > discountedPrice:
@@ -102,12 +74,12 @@ def useFirstTimeAutoshipDiscount(advertisedPrice, autoshipFirstTimeDiscountPerce
         return "%.2f" % discountedPrice
 
 def get_size(size_arr, atributes):
-    for attr in atributes:
-        id = attr['__ref'].split(':')[2].split(',')[0]
-        try:
+    try:
+        for attr in atributes:
+            id = attr['__ref'].split(':')[2].split(',')[0]
             return size_arr[id]
-        except:
-            pass
+    except:
+        pass
     return ''
 
 
@@ -171,7 +143,11 @@ def get_product_json_data(url, cookies, headers, proxy):
                 response_prd_json = requests.get(url, cookies=cookies, headers=headers, timeout=20)
 
             detail_prd_json = json.loads(response_prd_json.content)
-            max_try = 0
+            if '__APOLLO_STATE__' not in detail_prd_json['pageProps'].keys():
+                time.sleep(1)
+                max_try = max_try - 1
+            else:
+                max_try = 0
         except:
             time.sleep(1)
             max_try = max_try - 1
@@ -259,9 +235,11 @@ def get_sizes_list(detail_json):
         attr_sizes = [detail_json['pageProps']['__APOLLO_STATE__'][product] for product in detail_json['pageProps']['__APOLLO_STATE__'] if "Attribute:" in product]
         attr_sizes = [attr for attr in attr_sizes if attr['name'] in ['Size', 'Count']]
         for size in attr_sizes:
-            for value in size['values']:
-                attr_json = json.loads(value['__ref'].replace('AttributeValue:',''))
-                short_sizes[str(attr_json['id'])] = f"{size['name']}: {attr_json['value']}"
+            if 'values' in size.keys():
+                for value in size['values']:
+                    attr_json = json.loads(value['__ref'].replace('AttributeValue:',''))
+                    short_sizes[str(attr_json['id'])] = f"{size['name']}: {attr_json['value']}"
+
     except Exception as e:
         print(traceback.format_exc())
         log(f'Error on get_sizes_list: {str(e)}')
@@ -299,7 +277,8 @@ def get_product_items(detail_json):
          },
     '''
     try:
-        return [detail_json['pageProps']['__APOLLO_STATE__'][product] for product in detail_json['pageProps']['__APOLLO_STATE__'] if "Item" in product]
+        products =  [detail_json['pageProps']['__APOLLO_STATE__'][product] for product in detail_json['pageProps']['__APOLLO_STATE__'] if "Item" in product]
+        return products
     except:
         return None
 
@@ -307,8 +286,7 @@ def get_product_general_info(detail_json):
     try:
         return [detail_json['pageProps']['__APOLLO_STATE__'][product] for product in detail_json['pageProps']['__APOLLO_STATE__'] if "Product" in product][0]
     except Exception as e:
-        print(traceback.format_exc())
-        log(f'Error on get product default: {str(e)}')
+        log(f'Erroe on get product default: {str(traceback.format_exc())}')
         return None
 
 
@@ -432,8 +410,8 @@ def main(category, perc, f_name, proxy):
         for i in range(pageInit,pageEnd):
             params['from'] = f'{i * 36}'
             params['groupId'] = f'{category}'
-            print('Local 01')
-            products_links_list = get_product_links(params, cookies, headers, proxy)
+            products_links_list_main = get_product_links(params, cookies, headers, proxy)
+            products_links_list = [{'url': link['url'], 'status': link['status']} for link in  products_links_list_main]
 
             for product_data in products_links_list:
                 product_url = product_data['url']
@@ -451,7 +429,6 @@ def main(category, perc, f_name, proxy):
                     continue
 
                 try:
-                    print('Local 02')
                     detail_json = get_product_json_data(json_backend_url, cookies, headers, proxy)
                     if detail_json == None:
                         log(f'detail_json None in json url: {json_backend_url}', product_url)
@@ -474,7 +451,6 @@ def main(category, perc, f_name, proxy):
                                 products_links_list.append({'url': product_url, 'status': 'Error'})
                             continue # skip this product and go to the next
 
-                    print('Local 03')
                     product_items = get_product_items(detail_json)
                     if product_items == None:
                         if product_status == 'Error':
@@ -485,11 +461,11 @@ def main(category, perc, f_name, proxy):
                         continue # skip this product and go to the next
 
                     for product in product_items:
+                        if 'entryID' not in product.keys():
+                            product['entryID'] = product_url.split('/')[-1]
                         product_active_url = f"{('/').join(product_url.split('/')[:-1])}/{product['entryID']}"
                         json_backend_url = f'https://www.chewy.com/_next/data/chewy-pdp-ui-{sufix}/en-US/{product_active_url.replace("https://www.chewy.com/", "")}.json'
-                        print('Local 04')
                         detail_json = get_product_json_data(json_backend_url, cookies, headers, proxy)
-                        
                         product_general_info = get_product_general_info(detail_json)
                         if product_general_info == None:
                             log(f'product_general_info None in json url: {json_backend_url}', product_url)
@@ -536,28 +512,27 @@ def main(category, perc, f_name, proxy):
                             data["topHeadlinePromotion"] = product_detail['topHeadlinePromotion']
                         except:
                             data['topHeadlinePromotion'] = None
-
-                        attribute_values_key = [key for key in product.keys() if 'attributeValues' in key][0]
+                        
+                        try:
+                            attribute_values_key = [key for key in product.keys() if 'attributeValues' in key][0]
+                        except:
+                            attribute_values_key = None
                         
                         try:
                             try:
                                 images = [image for _, image in product['fullImage'].items() if image != 'Image'][1]
                             except:
                                 images = ''
+
                             try:
                                 advertised_price =  product['advertisedPrice'].replace('$','')
                             except:
-                                if product_status == 'Error':
-                                    error_products = error_products + 1
-                                log(f'** NO advertisedPrice for {product_url}', product_url)
-                                if product_status == 'normal' and check_exist(products_links_list, product_url) == False:
-                                    products_links_list.append({'url': product_url, 'status': 'Error'})
-                                continue
+                                advertised_price = None
 
                             data.update({
-                                "entryID": product['entryID'],
+                                "entryID": None if 'entryID' not in product.keys() else product['entryID'],
                                 "name": product['name'],
-                                "attributeValues": product[attribute_values_key], 
+                                "attributeValues": None if attribute_values_key == None else product[attribute_values_key], 
                                 "url": product_active_url,
                                 "advertisedPrice": advertised_price,
                                 "autoShipDiscountPercent": get_feature_flags(detail_json, 'autoshipFirstTimeDiscountPercent'),
@@ -566,8 +541,8 @@ def main(category, perc, f_name, proxy):
                                 "mapEnforced": None if 'mapEnforced' not in product_detail.keys() else product_detail['mapEnforced'],                            
                                 "autoshipBuyboxOverrideConflictingPromos": get_feature_flags(detail_json, 'autoshipBuyboxOverrideConflictingPromos'),
                                 "autoshipSuppressFTASList": get_feature_flags(detail_json, 'autoshipSuppressFTASList'),
-                                "inStock": product['inStock'],
-                                "gtin": f"{str(product['gtin'])}" if product['gtin'] != None else '000000000',
+                                "inStock": False if 'inStock' not in product.keys() else product['inStock'],
+                                "gtin": '000000000' if 'gtin' not in product.keys() else f"{str(product['gtin'])}" if product['gtin'] != None else '000000000',
                                 "images" : images, 
                                 "partNumber": None if 'partNumber' not in product.keys() else product['partNumber'],
                                 "isPrescription": None if 'isPrescription' not in product.keys() else product['isPrescription'],
@@ -593,6 +568,7 @@ def main(category, perc, f_name, proxy):
 
 
                             to_print={
+                                'slug': data['slug'], 
                                 'Product Code': data['entryID'],
                                 'Sku': data['partNumber'],
                                 'url': data['url'],
@@ -600,7 +576,7 @@ def main(category, perc, f_name, proxy):
                                 'Price': data['advertisedPrice'],
                                 'Stock': 'Instock' if data['inStock'] else 'Out of Stock', 
                                 'Breadcrumb': breadcrumb,
-                                'Shipping': 0 if float(data['advertisedPrice']) > 49 else '4.95',
+                                'Shipping': None if data['advertisedPrice'] == None else 0 if float(data['advertisedPrice']) > 49 else '4.95',
                                 'Image': data['images'],
                                 'Brand': data['manufacturerName'],
                                 'generic_name': get_description_attribute(data,'Generic Name'),
@@ -631,23 +607,26 @@ def main(category, perc, f_name, proxy):
 
                             variations_products = variations_products + 1
                             current_calc = datetime.now()
-                            print(f'Total unique product: {unique_products}')
+                            print(f'Total unique product: {unique_products}/{len(products_links_list)}/{len(products_links_list_main)}')
                             print(f'Total variations product: {variations_products}')
                             print(f'Total errors {error_products}')
                             print(f'Page speed {0 if variations_products == 0 else "%.2f" % ((current_calc - start_calc).total_seconds() / variations_products)}/s')
                             print(f'Product speed {0 if unique_products == 0 else  "%.2f" %((current_calc - start_calc).total_seconds() / unique_products)}/s')
                             print(f'Total time { "%.2f" % ((current_calc - start_calc).total_seconds() / 60)}min')
-                            print(f'Page {i+1}/{pageEnd - pageInit}')
+                            print(f'Page {i+1}/{pageEnd}')
                             print(f'Category {category}')
                             print(f'Status {product_status}')
+                            print(f"Total Errors in Array: {len([p for p in products_links_list if p['status'] == 'Error'])}")
                         except Exception as e:
-                            print(traceback.format_exc())
-                            if product_status == 'Error':
-                                error_products = error_products + 1
-                            if product_status == 'normal' and check_exist(products_links_list, product_url) == False:
-                                products_links_list.append({'url': product_url, 'status': 'Error'})
-                            print('Error A', e)
-                            log(f'Error in A parte of code {str(e)}')
+                           print(traceback.format_exc())
+                           if product_status == 'Error':
+                               error_products = error_products + 1
+                           if product_status == 'normal' and check_exist(products_links_list, product_url) == False:
+                               products_links_list.append({'url': product_url, 'status': 'Error'})
+                           print('Error A', e)
+                           print(traceback.format_exc())
+                           exit(0) 
+                           log(f'Error in A parte of code {str(e)}')
                 except KeyboardInterrupt:
                     exit(0)
                 except Exception as e:
