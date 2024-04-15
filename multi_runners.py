@@ -32,11 +32,24 @@ categories = {
     'pharmacy': '2515',
 }
 
-    
-dogs = [['python', 'app.py', '-c', 'cat',  '-p',  f'{index*5}-{(index+1)*5}', '--proxy', proxies.pop()] for index in range(0,20)]
+commands = [] 
 
-for dog in dogs:
-    print(dog)
+for pet in ['dog', 'cat']:
+    pets = [['python', 'app.py', '-c', pet,  '-p',  f'{index*5}-{(index+1)*5}', '--proxy', proxies.pop()] for index in range(0,20)]
+    for pet in pets:
+        commands.append(pet)
+
+
+for pet in ['fish', 'bird', 'small-pet', 'reptile', 'horse', 'pharmacy', 'farm-animal']:
+    pets = [['python', 'app.py', '-c', pet,  '-p',  f'{index*10}-{(index+1)*10}', '--proxy', proxies.pop()] for index in range(0,10)]
+    for pet in pets:
+        commands.append(pet)
+
+
+
+
+for cmd in commands:
+    print(cmd)
 
 
 
