@@ -5,6 +5,7 @@ import json
 import time 
 import csv
 import math
+import re
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from datetime import datetime
@@ -14,14 +15,16 @@ from selenium.webdriver.firefox.options import Options
 now = datetime.now()
 start_time = now.strftime("%H:%M:%S")
 
-proxy_host = "brd.superproxy.io"
-proxy_port = "22225"
-proxy_username = "brd-customer-hl_1ff5e80b-zone-demo"
-proxy_password = "mm2qx1ogaah8"
+url_done = set()
 
-#PROXY = f'https://{proxy_username}:{proxy_password}@{proxy_host}:{proxy_port}'
+def remove_break_lines(dictionary):
+    for key in dictionary.keys():
+        try:
+            dictionary[key] = None if dictionary[key] == None else re.sub("\n|\r", " ", f'{dictionary[key]}').strip()
+        except:
+            pass
 
-
+    return dictionary
 
 def log(message, product_url=None):
     log_now = datetime.now()
@@ -464,6 +467,9 @@ def main(category, perc, f_name, proxy):
                         if 'entryID' not in product.keys():
                             product['entryID'] = product_url.split('/')[-1]
                         product_active_url = f"{('/').join(product_url.split('/')[:-1])}/{product['entryID']}"
+                        if product_active_url in url_done:
+                            continue # duplicated url...
+
                         json_backend_url = f'https://www.chewy.com/_next/data/chewy-pdp-ui-{sufix}/en-US/{product_active_url.replace("https://www.chewy.com/", "")}.json'
                         detail_json = get_product_json_data(json_backend_url, cookies, headers, proxy)
                         product_general_info = get_product_general_info(detail_json)
@@ -568,7 +574,6 @@ def main(category, perc, f_name, proxy):
 
 
                             to_print={
-                                'slug': data['slug'], 
                                 'Product Code': data['entryID'],
                                 'Sku': data['partNumber'],
                                 'url': data['url'],
@@ -590,7 +595,9 @@ def main(category, perc, f_name, proxy):
                                 'msrp': None if 'strikeThroughPrice' not in data.keys() else data['strikeThroughPrice'].replace('$','') if data['strikeThroughPrice'] != None else '',
                                 'gtin': f"0000000000000{data['gtin']}"[-14:],
                             }
-                            print(json.dumps(to_print, indent=4))
+
+                            to_print = remove_break_lines(to_print)
+                            #print(json.dumps(to_print, indent=4))
                             writer = csv.DictWriter(f, fieldnames=to_print)
 
                             if head_lines == False:
@@ -601,12 +608,14 @@ def main(category, perc, f_name, proxy):
                                 variations_products = variations_products + 1
                                 to_print['Product Name'] = f"{data['name']} - Autosend"
                                 to_print['Price'] = data['firstTimeAutoshipPrice']
-                                print('--------')
-                                print(json.dumps(to_print, indent=4))
+                                to_print = remove_break_lines(to_print)
+                                #print('--------')
+                                #print(json.dumps(to_print, indent=4))
                                 writer.writerow(to_print)
 
                             variations_products = variations_products + 1
                             current_calc = datetime.now()
+                            print('--------')
                             print(f'Total unique product: {unique_products}/{len(products_links_list)}/{len(products_links_list_main)}')
                             print(f'Total variations product: {variations_products}')
                             print(f'Total errors {error_products}')
@@ -617,6 +626,7 @@ def main(category, perc, f_name, proxy):
                             print(f'Category {category}')
                             print(f'Status {product_status}')
                             print(f"Total Errors in Array: {len([p for p in products_links_list if p['status'] == 'Error'])}")
+                            url_done.add(product_active_url)
                         except Exception as e:
                            print(traceback.format_exc())
                            if product_status == 'Error':
