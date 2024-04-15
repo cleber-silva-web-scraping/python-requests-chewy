@@ -50,9 +50,9 @@ The site Chewy has a ton of products and does not allow simultaneous access from
 
 I've prepared an app called multi_runners.py that can distribute all proxies for a range of pages for each category.
 
-The categories dog and cat are larger, so the runner will split processes to run 5% each.
+The categories dog and cat are larger, so the runner will split processes to run 2% each.
 
-Other categories will be split for 10%.
+Other categories will be split for 5%.
 
 #### How to run **multi_runnners.py**
 
@@ -71,12 +71,12 @@ Other categories will be split for 10%.
     - The **best** proxy service form me is **proxyscrape**(https://bit.ly/49BjmSL) with Unlimited bandwidth and fix good price
     ![image](https://github.com/cleber-silva-web-scraping/python-requests-chewy/assets/6031795/3cc9f737-a175-4819-bebb-20ab6c68be2e)
 
-    * for the current configuration you will need 110 different proxies to all run on the same machine (source) 
-    * **multi_runner.py** will prepare 110 prompts like this:
+    * for the current configuration you will need **240** different proxies to all run on the same machine (source) 
+    * **multi_runner.py** will prepare **240** prompts like this:
     ```
-      python app.py -c dog -p 0-5 --proxy 154.202.96.xxx:8080
-      python app.py -c dog -p 5-10 --proxy 154.202.97.xxx:8080
-      python app.py -c dog -p 10-15 --proxy 154.84.143.xxx:8080
+      python app.py -c dog -p 0-2 --proxy 154.202.96.xxx:8080
+      python app.py -c dog -p 2-4 --proxy 154.202.97.xxx:8080
+      python app.py -c dog -p 4-6 --proxy 154.84.143.xxx:8080
       python app.py -c dog -p 15-20 --proxy 154.202.97.xxx:8080
       python app.py -c dog -p 20-25 --proxy 154.201.61.xxx:8080
       python app.py -c dog -p 25-30 --proxy 154.84.143.xxx:8080
