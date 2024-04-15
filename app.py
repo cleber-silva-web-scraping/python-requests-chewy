@@ -12,6 +12,7 @@ from datetime import datetime
 from selenium.webdriver.firefox.options import Options
 
 
+path = '/'.join(__file__.split('/')[:-1])
 now = datetime.now()
 start_time = now.strftime("%H:%M:%S")
 
@@ -29,42 +30,61 @@ def remove_break_lines(dictionary):
 def log(message, product_url=None):
     log_now = datetime.now()
     log_time = log_now.strftime("%H:%M:%S")
-    f = open("app_error.log", "a")
+    f = open(f"{path}/app_error.log", "a")
     f.write(f'[{log_time}] {message}\n')
     f.close()
     if product_url:
-        f = open("url_error.log", "a")
+        f = open(f"{path}/url_error.log", "a")
         f.write(f'{product_url}\n')
         f.close()
 
 
 def get_sub_header():
-    options = Options()
-    options.add_argument("--headless")
-    driver = webdriver.Firefox(options=options)
-    driver.get('https://www.chewy.com/deals/todays-deals-2723')
-    time.sleep(5)
-    data = driver.find_element(By.XPATH,"//div[contains(@class,'__subtext__')]")
-    data_text = data.text
-    any_product = driver.find_element(By.XPATH, "//a[contains(@class, 'product-image')]")
-    product_url = any_product.get_attribute('href')
-    driver.quit()
-    return {
-        'url': product_url,
-        'sub_header': data_text
-    }
+    max_try = 5
+    data = None
+    while max_try > 0:
+        try:
+            options = Options()
+            options.add_argument("--headless")
+            driver = webdriver.Firefox(options=options)
+            driver.get('https://www.chewy.com/deals/todays-deals-2723')
+            time.sleep(5)
+            data = driver.find_element(By.XPATH,"//div[contains(@class,'__subtext__')]")
+            data_text = data.text
+            any_product = driver.find_element(By.XPATH, "//a[contains(@class, 'product-image')]")
+            product_url = any_product.get_attribute('href')
+            driver.quit()
+            data = {
+                'url': product_url,
+                'sub_header': data_text
+            }
+            max_try = 0
+        except:
+            time.sleep(3)
+            max_try = max_try -1
 
+    return data
 
 def get_path(url):
-    firefoxOptions = Options()
-    firefoxOptions.add_argument("--headless")
-    driver = webdriver.Firefox(options=firefoxOptions)
-    driver.get(url)
-    time.sleep(5)
-    elem = driver.find_element("xpath", "//*")
-    source_code = elem.get_attribute("outerHTML")
-    driver.quit()
-    return str(source_code).split('chewy-pdp-ui-')[1].split('/')[0]
+    max_try = 5
+    data = None
+    while max_try > 0:
+        try:
+            firefoxOptions = Options()
+            firefoxOptions.add_argument("--headless")
+            driver = webdriver.Firefox(options=firefoxOptions)
+            driver.get(url)
+            time.sleep(5)
+            elem = driver.find_element("xpath", "//*")
+            source_code = elem.get_attribute("outerHTML")
+            driver.quit()
+            data = str(source_code).split('chewy-pdp-ui-')[1].split('/')[0]
+            max_try = 0
+        except:
+            time.sleep(3)
+            max_try = max_try - 1
+
+    return data
 
 def useFirstTimeAutoshipDiscount(advertisedPrice, autoshipFirstTimeDiscountPercent, autoshipFirstTimeDiscountMaxSavings):
     if advertisedPrice == None:
@@ -375,7 +395,14 @@ def main(category, perc, f_name, proxy):
     variations_products = 0
     print('\n\nGETING WEB SITE BUILD PATH JUST WAIT PLEASE...')
     sub_header = get_sub_header()
+    if sub_header == None:
+        log(f'Fatal error headers -c {category} -p {perc}')
+        exit(0)
+
     sufix = get_path(sub_header['url'])
+    if sufix == None:
+        log(f'Fatal error sufix -c {category} -p {perc}')
+        exit(0)
 
     session = requests.Session()
     if proxy != '':
@@ -388,10 +415,10 @@ def main(category, perc, f_name, proxy):
     head_lines = False
 
     params['groupId'] = f'{category}'
-    time.sleep(2)
     if proxy != '':
         response = requests.get('https://www.chewy.com/plp/api/search', params=params, cookies=cookies, headers=headers, proxies=proxies, timeout=20)
     else:
+        time.sleep(1/2)
         response = requests.get('https://www.chewy.com/plp/api/search', params=params, cookies=cookies, headers=headers, timeout=20)
 
     json_data = json.loads(response.text)
@@ -407,7 +434,7 @@ def main(category, perc, f_name, proxy):
     print(f'Category: {category}\nInitial Page: {pageInit}\nLast Page: {pageEnd}\nFile Name: {f_name}\nSite build "{sufix}"')
 
     print('ALL DONE, STARTING CRAWLER NOW...\n\n')
-    time.sleep(5)
+    time.sleep(1)
     start_calc = datetime.now()
     with open(f_name, 'a') as f:
         for i in range(pageInit,pageEnd):
@@ -682,7 +709,7 @@ if __name__ == '__main__':
     if args.file == None:
         args.file=f"{args.category}_chewy_{args.percentage}_{file_time}.csv"
 
-    main(categories[args.category], args.percentage, args.file, args.proxy)
+    main(categories[args.category], args.percentage, f'{path}/{args.file}', args.proxy)
     print("Start Time =", start_time)
 
     now = datetime.now()
