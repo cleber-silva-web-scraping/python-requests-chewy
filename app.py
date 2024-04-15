@@ -144,7 +144,7 @@ def get_product_json_data(url, cookies, headers, proxy):
 
             detail_prd_json = json.loads(response_prd_json.content)
             if '__APOLLO_STATE__' not in detail_prd_json['pageProps'].keys():
-                time.sleep(1)
+                time.sleep(3)
                 max_try = max_try - 1
             else:
                 max_try = 0
@@ -659,7 +659,7 @@ if __name__ == '__main__':
     parser.add_argument("--category",  "-c", help="[REQUIRED] Category can be dog, cat, fish, bird, small-pet, reptile, farm-animal, horse or pharmacy.")
     parser.add_argument("--percentage", "-p", help='[OPTIONAL] Percentual of pages can be 0-25, 25-50, 10-20 or any combinations between 0 and 100. Default 0-100.', type=str, default='0-100')
     parser.add_argument("--file", "-f", help='[OPTIONAL] File name(csv) to ouput result. Default [category]_chewy_[percentage]_YY-MM-DD-HH-mm-ss.csv', type=str)
-    parser.add_argument("--proxy", "-x", help='[OPTIONAL] Proxy "https://user:pass@proxy_host:prox_port"', type=str, default='')
+    parser.add_argument("--proxy", "-x", help='[OPTIONAL] Proxy "https://user:pass@proxy_host:prox_port" or "hosting:port"', type=str, default='')
     args=parser.parse_args()
     if args.category == None:
         print(parser.format_help())
