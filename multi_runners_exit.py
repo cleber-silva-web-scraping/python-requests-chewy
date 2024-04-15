@@ -23,17 +23,29 @@ proxies = [p for p in f.read().split('\n') if p != '']
 
 commands = [] 
 
-for pet in ['dog', 'cat']:
+for pet in ['dog']:
     pets = [['python', 'app.py', '-c', pet,  '-p',  f'{index*2}-{(index+1)*2}', '--proxy', proxies.pop()] for index in range(0,50)]
     for pet in pets:
         commands.append(pet)
 
 
-for pet in ['fish', 'bird', 'small-pet', 'reptile', 'horse', 'pharmacy', 'farm-animal']:
-    pets = [['python', 'app.py', '-c', pet,  '-p',  f'{index*5}-{(index+1)*5}', '--proxy', proxies.pop()] for index in range(0,20)]
-    for pet in pets:
-        commands.append(pet)
+# for pet in ['dog', 'cat']:
+#     pets = [['python', 'app.py', '-c', pet,  '-p',  f'{index*5}-{(index+1)*5}', '--proxy', f"{'.'.join(proxies.pop().split('.')[:-1])}.xxx:8080"] for index in range(0,20)]
+#     for pet in pets:
+#         commands.append(pet)
+# 
+# 
+# for pet in ['fish', 'bird', 'small-pet', 'reptile', 'horse', 'pharmacy', 'farm-animal']:
+#     pets = [['python', 'app.py', '-c', pet,  '-p',  f'{index*10}-{(index+1)*10}', '--proxy', f"{'.'.join(proxies.pop().split('.')[:-1])}.xxx:8080"] for index in range(0,10)]
+#     for pet in pets:
+#         commands.append(pet)
+# 
+# 
 
+for cmd in commands:
+    print(' '.join(cmd))
+
+exit(0)
 
 now = datetime.now()
 start_time = now.strftime("%H:%M:%S")
