@@ -1,5 +1,5 @@
 import requests
-import sys
+import traceback
 import argparse
 import json
 import time 
@@ -9,14 +9,36 @@ from selenium import webdriver
 from selenium.webdriver.common.by import By
 from datetime import datetime
 from selenium.webdriver.firefox.options import Options
-now = datetime.now()
 
+
+now = datetime.now()
 start_time = now.strftime("%H:%M:%S")
 
+proxy_host = "brd.superproxy.io"
+proxy_port = "22225"
+proxy_username = "brd-customer-hl_1ff5e80b-zone-demo"
+proxy_password = "mm2qx1ogaah8"
+
+#PROXY = f'https://{proxy_username}:{proxy_password}@{proxy_host}:{proxy_port}'
+
+
+
+def log(message, product_url=None):
+    log_now = datetime.now()
+    log_time = log_now.strftime("%H:%M:%S")
+    f = open("app_error.log", "a")
+    f.write(f'[{log_time}] {message}\n')
+    f.close()
+    if product_url:
+        f = open("url_error.log", "a")
+        f.write(f'{product_url}\n')
+        f.close()
+
+
 def get_sub_header():
-    firefoxOptions = Options()
-    firefoxOptions.add_argument("--headless")
-    driver = webdriver.Firefox(options=firefoxOptions)
+    options = Options()
+    options.add_argument("--headless")
+    driver = webdriver.Firefox(options=options)
     driver.get('https://www.chewy.com/deals/todays-deals-2723')
     time.sleep(5)
     data = driver.find_element(By.XPATH,"//div[contains(@class,'__subtext__')]")
@@ -43,7 +65,7 @@ def get_path(url):
 
 def useFirstTimeAutoshipDiscount(advertisedPrice, autoshipFirstTimeDiscountPercent, autoshipFirstTimeDiscountMaxSavings):
     if advertisedPrice == None:
-        return
+        return None
     discountedPrice = float(advertisedPrice) * (1 - (float(autoshipFirstTimeDiscountPercent) / 100))
     maxSavingsPrice = float(advertisedPrice) - float(autoshipFirstTimeDiscountMaxSavings)
     if maxSavingsPrice > discountedPrice:
@@ -52,12 +74,12 @@ def useFirstTimeAutoshipDiscount(advertisedPrice, autoshipFirstTimeDiscountPerce
         return "%.2f" % discountedPrice
 
 def get_size(size_arr, atributes):
-    for attr in atributes:
-        id = attr['__ref'].split(':')[2].split(',')[0]
-        try:
+    try:
+        for attr in atributes:
+            id = attr['__ref'].split(':')[2].split(',')[0]
             return size_arr[id]
-        except:
-            pass
+    except:
+        pass
     return ''
 
 
@@ -84,17 +106,23 @@ params = {
     'groupId': '2515',
 }
 
-def get_product_links(params, cookies, headers):
+def get_product_links(params, cookies, headers, proxy):
+    proxies = { 'https' : proxy } 
     max_try = 5
     product_links = []
     while max_try > 0:
         try:
-            response = requests.get('https://www.chewy.com/plp/api/search', params=params, cookies=cookies, headers=headers)
+            if proxy != '':
+                response = requests.get('https://www.chewy.com/plp/api/search', params=params, cookies=cookies, headers=headers, proxies=proxies, timeout=20)
+            else:
+                time.sleep(1/5)
+                response = requests.get('https://www.chewy.com/plp/api/search', params=params, cookies=cookies, headers=headers, timeout=20)
+
             json_data = json.loads(response.text)
-            product_links = [product['href'] for product in json_data['products']]
+            product_links = [ {'url': product['href'], 'status': 'normal'} for product in json_data['products']]
             max_try = 0
         except:
-            time.sleep(3)
+            time.sleep(1)
             max_try = max_try - 1
 
     if product_links == []:
@@ -102,21 +130,28 @@ def get_product_links(params, cookies, headers):
 
     return product_links
 
-def get_product_json_data(url, cookies, headers):
+def get_product_json_data(url, cookies, headers, proxy):
+    proxies = { 'https' : proxy } 
     max_try = 5
     detail_prd_json = None
     while max_try > 0:
         try:
-            response_prd_json = requests.get(url, cookies=cookies, headers=headers)
+            if proxy != '':
+                response_prd_json = requests.get(url, cookies=cookies, headers=headers, proxies=proxies, timeout=20)
+            else:
+                time.sleep(1/5)
+                response_prd_json = requests.get(url, cookies=cookies, headers=headers, timeout=20)
+
             detail_prd_json = json.loads(response_prd_json.content)
-            max_try = 0
+            if '__APOLLO_STATE__' not in detail_prd_json['pageProps'].keys():
+                time.sleep(1)
+                max_try = max_try - 1
+            else:
+                max_try = 0
         except:
-            time.sleep(3)
+            time.sleep(1)
             max_try = max_try - 1
     return detail_prd_json
-
-def log(message):
-    print(f'[LOG] {message}')
 
 def get_feature_flags(detail_json, flag_name, default = None):
     '''
@@ -200,10 +235,13 @@ def get_sizes_list(detail_json):
         attr_sizes = [detail_json['pageProps']['__APOLLO_STATE__'][product] for product in detail_json['pageProps']['__APOLLO_STATE__'] if "Attribute:" in product]
         attr_sizes = [attr for attr in attr_sizes if attr['name'] in ['Size', 'Count']]
         for size in attr_sizes:
-            for value in size['values']:
-                attr_json = json.loads(value['__ref'].replace('AttributeValue:',''))
-                short_sizes[str(attr_json['id'])] = f"{size['name']}: {attr_json['value']}"
+            if 'values' in size.keys():
+                for value in size['values']:
+                    attr_json = json.loads(value['__ref'].replace('AttributeValue:',''))
+                    short_sizes[str(attr_json['id'])] = f"{size['name']}: {attr_json['value']}"
+
     except Exception as e:
+        print(traceback.format_exc())
         log(f'Error on get_sizes_list: {str(e)}')
     return short_sizes
 
@@ -239,7 +277,8 @@ def get_product_items(detail_json):
          },
     '''
     try:
-        return [detail_json['pageProps']['__APOLLO_STATE__'][product] for product in detail_json['pageProps']['__APOLLO_STATE__'] if "Item" in product]
+        products =  [detail_json['pageProps']['__APOLLO_STATE__'][product] for product in detail_json['pageProps']['__APOLLO_STATE__'] if "Item" in product]
+        return products
     except:
         return None
 
@@ -247,7 +286,7 @@ def get_product_general_info(detail_json):
     try:
         return [detail_json['pageProps']['__APOLLO_STATE__'][product] for product in detail_json['pageProps']['__APOLLO_STATE__'] if "Product" in product][0]
     except Exception as e:
-        log(f'Error on get product default {str(e)}')
+        log(f'Erroe on get product default: {str(traceback.format_exc())}')
         return None
 
 
@@ -320,19 +359,38 @@ def get_description_attribute(data, attribute_name):
     except:
         return ''
 
-def main(category, perc, f_name):
+def check_exist(rows, value):
+    for row in rows:
+        if row['url'] == value and row['status'] == 'Error':
+            return True
+    return False
+
+def main(category, perc, f_name, proxy):
+    proxies = { 'https' : proxy } 
+    unique_products = 0
+    error_products = 0
+    variations_products = 0
     print('\n\nGETING WEB SITE BUILD PATH JUST WAIT PLEASE...')
     sub_header = get_sub_header()
     sufix = get_path(sub_header['url'])
 
     session = requests.Session()
-    response = session.get('https://www.chewy.com/', headers=headers)
+    if proxy != '':
+        response = session.get('https://www.chewy.com/', headers=headers, proxies=proxies, timeout=20)
+    else:
+        response = session.get('https://www.chewy.com/', headers=headers, timeout=20)
+
     cookies = { 'KP_UIDz-ssn': f"{response.cookies.get_dict()['KP_UIDz-ssn']};" }
 
     head_lines = False
 
     params['groupId'] = f'{category}'
-    response = requests.get('https://www.chewy.com/plp/api/search', params=params, cookies=cookies, headers=headers)
+    time.sleep(2)
+    if proxy != '':
+        response = requests.get('https://www.chewy.com/plp/api/search', params=params, cookies=cookies, headers=headers, proxies=proxies, timeout=20)
+    else:
+        response = requests.get('https://www.chewy.com/plp/api/search', params=params, cookies=cookies, headers=headers, timeout=20)
+
     json_data = json.loads(response.text)
     total = math.ceil(float(json_data['recordSetTotal']) / 36)
     pageStr = perc
@@ -343,47 +401,78 @@ def main(category, perc, f_name):
     if '-100' in pageStr:
         pageEnd = pageEnd + 1
 
-    print(f'Category: {category}\nInitial Page: {pageInit}\nLast Page: {pageEnd}\nFile Name: {f_name}\n Site build {sufix}')
+    print(f'Category: {category}\nInitial Page: {pageInit}\nLast Page: {pageEnd}\nFile Name: {f_name}\nSite build "{sufix}"')
 
     print('ALL DONE, STARTING CRAWLER NOW...\n\n')
     time.sleep(5)
+    start_calc = datetime.now()
     with open(f_name, 'a') as f:
         for i in range(pageInit,pageEnd):
             params['from'] = f'{i * 36}'
             params['groupId'] = f'{category}'
-            products_links_list = get_product_links(params, cookies, headers)
+            products_links_list_main = get_product_links(params, cookies, headers, proxy)
+            products_links_list = [{'url': link['url'], 'status': link['status']} for link in  products_links_list_main]
 
-            for product_url in products_links_list:
+            for product_data in products_links_list:
+                product_url = product_data['url']
+                product_status = product_data['status']
+                unique_products = unique_products + 1
                 try:
                     json_backend_url = f'https://www.chewy.com/_next/data/chewy-pdp-ui-{sufix}/en-US/{product_url.replace("https://www.chewy.com/", "")}.json'
-                    detail_json = get_product_json_data(json_backend_url, cookies, headers)
-                    time.sleep(1/2)
+                except:
+                    log(f'Product url replace error in : {product_url}', product_url)
+                    if product_status == 'Error':
+                        error_products = error_products + 1
+                    if product_status == 'normal' and check_exist(products_links_list, product_url) == False:
+                        products_links_list.append({'url': product_url, 'status': 'Error'})
+                        error_products = error_products - 1
+                    continue
+
+                try:
+                    detail_json = get_product_json_data(json_backend_url, cookies, headers, proxy)
                     if detail_json == None:
-                        log(f'detail_json None in json url: {json_backend_url}')
+                        log(f'detail_json None in json url: {json_backend_url}', product_url)
                         sub_header = get_sub_header()
                         sufix = get_path(sub_header['url'])
                         session = requests.Session()
-                        response = session.get('https://www.chewy.com/', headers=headers)
+                        if proxy != '': 
+                            response = session.get('https://www.chewy.com/', headers=headers, proxies=proxies, timeout=20)
+                        else:
+                            response = session.get('https://www.chewy.com/', headers=headers, timeout=20)
+
                         cookies = { 'KP_UIDz-ssn': f"{response.cookies.get_dict()['KP_UIDz-ssn']};" }
                         json_backend_url = f'https://www.chewy.com/_next/data/chewy-pdp-ui-{sufix}/en-US/{product_url.replace("https://www.chewy.com/", "")}.json'
-                        detail_json = get_product_json_data(json_backend_url, cookies, headers)
+                        detail_json = get_product_json_data(json_backend_url, cookies, headers, proxy)
                         if detail_json == None:
+                            if product_status == 'Error':
+                                error_products = error_products + 1
+                            log(f'Error skip product list {str(json_backend_url)}', product_url)
+                            if product_status == 'normal' and check_exist(products_links_list, product_url) == False:
+                                products_links_list.append({'url': product_url, 'status': 'Error'})
                             continue # skip this product and go to the next
 
                     product_items = get_product_items(detail_json)
                     if product_items == None:
-                        log(f'product_items None in json url: {json_backend_url}')
+                        if product_status == 'Error':
+                            error_products = error_products + 1
+                        log(f'Error skip product_items in json url: {str(json_backend_url)}', product_url)
+                        if product_status == 'normal' and check_exist(products_links_list, product_url) == False:
+                            products_links_list.append({'url': product_url, 'status': 'Error'})
                         continue # skip this product and go to the next
 
                     for product in product_items:
+                        if 'entryID' not in product.keys():
+                            product['entryID'] = product_url.split('/')[-1]
                         product_active_url = f"{('/').join(product_url.split('/')[:-1])}/{product['entryID']}"
                         json_backend_url = f'https://www.chewy.com/_next/data/chewy-pdp-ui-{sufix}/en-US/{product_active_url.replace("https://www.chewy.com/", "")}.json'
-                        detail_json = get_product_json_data(json_backend_url, cookies, headers)
-                        time.sleep(1/2)
-                        
+                        detail_json = get_product_json_data(json_backend_url, cookies, headers, proxy)
                         product_general_info = get_product_general_info(detail_json)
                         if product_general_info == None:
-                            log(f'product_general_info None in json url: {json_backend_url}')
+                            log(f'product_general_info None in json url: {json_backend_url}', product_url)
+                            if product_status == 'Error':
+                                error_products = error_products + 1
+                            if product_status == 'normal' and check_exist(products_links_list, product_url) == False:
+                                products_links_list.append({'url': product_url, 'status': 'Error'})
                             continue # skip this product and go to the next
 
 
@@ -395,7 +484,11 @@ def main(category, perc, f_name):
                         product_detail = get_product_details(detail_json)
 
                         if product_detail == None:
-                            log(f'product_detail None in json url: {json_backend_url}')
+                            log(f'product_detail None in json url: {json_backend_url}', product_url)
+                            if product_status == 'Error':
+                                error_products = error_products + 1
+                            if product_status == 'normal' and check_exist(products_links_list, product_url) == False:
+                                products_links_list.append({'url': product_url, 'status': 'Error'})
                             continue # skip this product and go to the next
 
                         data = {
@@ -419,35 +512,44 @@ def main(category, perc, f_name):
                             data["topHeadlinePromotion"] = product_detail['topHeadlinePromotion']
                         except:
                             data['topHeadlinePromotion'] = None
-
-                        attribute_values_key = [key for key in product.keys() if 'attributeValues' in key][0]
+                        
+                        try:
+                            attribute_values_key = [key for key in product.keys() if 'attributeValues' in key][0]
+                        except:
+                            attribute_values_key = None
                         
                         try:
                             try:
                                 images = [image for _, image in product['fullImage'].items() if image != 'Image'][1]
                             except:
                                 images = ''
+
+                            try:
+                                advertised_price =  product['advertisedPrice'].replace('$','')
+                            except:
+                                advertised_price = None
+
                             data.update({
-                                "entryID": product['entryID'],
+                                "entryID": None if 'entryID' not in product.keys() else product['entryID'],
                                 "name": product['name'],
-                                "attributeValues": product[attribute_values_key], 
+                                "attributeValues": None if attribute_values_key == None else product[attribute_values_key], 
                                 "url": product_active_url,
-                                "advertisedPrice": product['advertisedPrice'].replace('$',''),
+                                "advertisedPrice": advertised_price,
                                 "autoShipDiscountPercent": get_feature_flags(detail_json, 'autoshipFirstTimeDiscountPercent'),
                                 "mapSavings": None if 'mapSavings' not in product_detail.keys() else product_detail['mapSavings'],                            
                                 "descriptionAttributes": {},
-                                "mapEnforced": product_detail['mapEnforced'],                            
+                                "mapEnforced": None if 'mapEnforced' not in product_detail.keys() else product_detail['mapEnforced'],                            
                                 "autoshipBuyboxOverrideConflictingPromos": get_feature_flags(detail_json, 'autoshipBuyboxOverrideConflictingPromos'),
                                 "autoshipSuppressFTASList": get_feature_flags(detail_json, 'autoshipSuppressFTASList'),
-                                "inStock": product['inStock'],
-                                "gtin": f"{str(product['gtin'])}" if product['gtin'] != None else '000000000',
+                                "inStock": False if 'inStock' not in product.keys() else product['inStock'],
+                                "gtin": '000000000' if 'gtin' not in product.keys() else f"{str(product['gtin'])}" if product['gtin'] != None else '000000000',
                                 "images" : images, 
-                                "partNumber": product['partNumber'],
-                                "isPrescription": product['isPrescription'],
+                                "partNumber": None if 'partNumber' not in product.keys() else product['partNumber'],
+                                "isPrescription": None if 'isPrescription' not in product.keys() else product['isPrescription'],
                             })
-
-                            for attribute in product_detail['descriptionAttributes']:
-                                data['descriptionAttributes'][f"{attribute['name']}"] = attribute['values'][0]['__ref'].split(':')[-1].split('}')[0] 
+                            if 'descriptionAttributes' in product_detail.keys():
+                                for attribute in product_detail['descriptionAttributes']:
+                                    data['descriptionAttributes'][f"{attribute['name']}"] = attribute['values'][0]['__ref'].split(':')[-1].split('}')[0] 
 
                             data["firstTimeAutoshipPrice"] = useFirstTimeAutoshipDiscount(data['advertisedPrice'], data['autoShipDiscountPercent'], data['autoshipFirstTimeDiscountMaxSavings'])
                             data['isConflitPromo']  = isConflitPromo(data)
@@ -466,6 +568,7 @@ def main(category, perc, f_name):
 
 
                             to_print={
+                                'slug': data['slug'], 
                                 'Product Code': data['entryID'],
                                 'Sku': data['partNumber'],
                                 'url': data['url'],
@@ -473,7 +576,7 @@ def main(category, perc, f_name):
                                 'Price': data['advertisedPrice'],
                                 'Stock': 'Instock' if data['inStock'] else 'Out of Stock', 
                                 'Breadcrumb': breadcrumb,
-                                'Shipping': 0 if float(data['advertisedPrice']) > 49 else '4.95',
+                                'Shipping': None if data['advertisedPrice'] == None else 0 if float(data['advertisedPrice']) > 49 else '4.95',
                                 'Image': data['images'],
                                 'Brand': data['manufacturerName'],
                                 'generic_name': get_description_attribute(data,'Generic Name'),
@@ -484,7 +587,7 @@ def main(category, perc, f_name):
                                 'promotional_text': data['promotion'],
                                 'promotional_information:': sub_header['sub_header'],
                                 'pack_size': get_size(short_sizes, data['attributeValues']),
-                                'msrp': data['strikeThroughPrice'].replace('$','') if data['strikeThroughPrice'] != None else '',
+                                'msrp': None if 'strikeThroughPrice' not in data.keys() else data['strikeThroughPrice'].replace('$','') if data['strikeThroughPrice'] != None else '',
                                 'gtin': f"0000000000000{data['gtin']}"[-14:],
                             }
                             print(json.dumps(to_print, indent=4))
@@ -495,20 +598,46 @@ def main(category, perc, f_name):
                                 writer.writeheader()
                             writer.writerow(to_print)
                             if data['firstTimeAutoshipPrice'] != None:
-                             to_print['Product Name'] = f"{data['name']} - Autosend"
-                             to_print['Price'] = data['firstTimeAutoshipPrice']
-                             print('--------')
-                             print(json.dumps(to_print, indent=4))
-                             writer.writerow(to_print)
+                                variations_products = variations_products + 1
+                                to_print['Product Name'] = f"{data['name']} - Autosend"
+                                to_print['Price'] = data['firstTimeAutoshipPrice']
+                                print('--------')
+                                print(json.dumps(to_print, indent=4))
+                                writer.writerow(to_print)
+
+                            variations_products = variations_products + 1
+                            current_calc = datetime.now()
+                            print(f'Total unique product: {unique_products}/{len(products_links_list)}/{len(products_links_list_main)}')
+                            print(f'Total variations product: {variations_products}')
+                            print(f'Total errors {error_products}')
+                            print(f'Page speed {0 if variations_products == 0 else "%.2f" % ((current_calc - start_calc).total_seconds() / variations_products)}/s')
+                            print(f'Product speed {0 if unique_products == 0 else  "%.2f" %((current_calc - start_calc).total_seconds() / unique_products)}/s')
+                            print(f'Total time { "%.2f" % ((current_calc - start_calc).total_seconds() / 60)}min')
+                            print(f'Page {i+1}/{pageEnd}')
+                            print(f'Category {category}')
+                            print(f'Status {product_status}')
+                            print(f"Total Errors in Array: {len([p for p in products_links_list if p['status'] == 'Error'])}")
                         except Exception as e:
-                            print('Error A', e)
-                            pass
+                           print(traceback.format_exc())
+                           if product_status == 'Error':
+                               error_products = error_products + 1
+                           if product_status == 'normal' and check_exist(products_links_list, product_url) == False:
+                               products_links_list.append({'url': product_url, 'status': 'Error'})
+                           print('Error A', e)
+                           print(traceback.format_exc())
+                           exit(0) 
+                           log(f'Error in A parte of code {str(e)}')
                 except KeyboardInterrupt:
                     exit(0)
                 except Exception as e:
+                    print(traceback.format_exc())
+                    if product_status == 'Error':
+                        error_products = error_products + 1
+                    if product_status == 'normal' and check_exist(products_links_list, product_url) == False:
+                        products_links_list.append({'url': product_url, 'status': 'Error'})
+                    log(f'Error in B parte of code {str(e)}')
                     print('Error B', e)
                 print('--------')
-        time.sleep(2)
 # start time = 02:15
 categories = {
     'dog': '288',
@@ -522,6 +651,7 @@ categories = {
     'pharmacy': '2515',
 }
 
+
 if __name__ == '__main__':
     parser=argparse.ArgumentParser()
     file_time = now.strftime("%y%m%d%H%M%S")
@@ -529,6 +659,7 @@ if __name__ == '__main__':
     parser.add_argument("--category",  "-c", help="[REQUIRED] Category can be dog, cat, fish, bird, small-pet, reptile, farm-animal, horse or pharmacy.")
     parser.add_argument("--percentage", "-p", help='[OPTIONAL] Percentual of pages can be 0-25, 25-50, 10-20 or any combinations between 0 and 100. Default 0-100.', type=str, default='0-100')
     parser.add_argument("--file", "-f", help='[OPTIONAL] File name(csv) to ouput result. Default [category]_chewy_[percentage]_YY-MM-DD-HH-mm-ss.csv', type=str)
+    parser.add_argument("--proxy", "-x", help='[OPTIONAL] Proxy "https://user:pass@proxy_host:prox_port"', type=str, default='')
     args=parser.parse_args()
     if args.category == None:
         print(parser.format_help())
@@ -541,8 +672,10 @@ if __name__ == '__main__':
     if args.file == None:
         args.file=f"{args.category}_chewy_{args.percentage}_{file_time}.csv"
 
-    main(categories[args.category], args.percentage, args.file)
+    main(categories[args.category], args.percentage, args.file, args.proxy)
     print("Start Time =", start_time)
+
+    now = datetime.now()
     current_time = now.strftime("%H:%M:%S")
     print("Current Time =", current_time)
 
