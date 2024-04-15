@@ -2,6 +2,7 @@ import os
 import time
 from subprocess import PIPE, Popen
 from threading import Thread
+from datetime import datetime
 
 def run_command(command, wait):
    time.sleep(wait)
@@ -20,18 +21,6 @@ def run_command(command, wait):
 f = open("proxy.list", "r")
 proxies = [p for p in f.read().split('\n') if p != '']
 
-categories = {
-    'dog': '288',
-    'cat': '325',
-    'fish': '885',
-    'bird': '941',
-    'small-pet': '977',
-    'reptile': '1025',
-    'farm-animal': '8403',
-    'horse': '1663',
-    'pharmacy': '2515',
-}
-
 commands = [] 
 
 for pet in ['dog', 'cat']:
@@ -46,15 +35,8 @@ for pet in ['fish', 'bird', 'small-pet', 'reptile', 'horse', 'pharmacy', 'farm-a
         commands.append(pet)
 
 
-
-
-for cmd in commands:
-    print(cmd)
-
-
-
-exit(0)
-
+now = datetime.now()
+start_time = now.strftime("%H:%M:%S")
 threads = []
 
 for index, cmd in enumerate(commands):
@@ -66,5 +48,9 @@ for t in threads:
 for t in threads:
     t.join()
 
+now = datetime.now()
+end_time = now.strftime("%H:%M:%S")
 
-print('aqui .....')
+print(f'Start at : {start_time}')
+print(f'End at : {end_time}')
+
