@@ -1,4 +1,5 @@
 import requests
+import uuid
 import traceback
 import argparse
 import json
@@ -11,12 +12,31 @@ from selenium.webdriver.common.by import By
 from datetime import datetime
 from selenium.webdriver.firefox.options import Options
 
-
+process_uuid = str(uuid.uuid4())
 path = '/'.join(__file__.split('/')[:-1])
 now = datetime.now()
 start_time = now.strftime("%H:%M:%S")
 
 url_done = set()
+
+def write_to_file(f, to_print, head_lines, data = None):
+    writer = csv.DictWriter(f, fieldnames=to_print)
+
+    if head_lines == False:
+        writer.writeheader()
+
+    to_print = remove_break_lines(to_print)
+    writer.writerow(to_print)
+    variations_products = 1
+
+    if data != None and 'firstTimeAutoshipPrice' in data.keys() and data['firstTimeAutoshipPrice'] != None:
+        variations_products = variations_products + 1
+        to_print['Product Name'] = f"{data['name']} - Autosend"
+        to_print['Price'] = data['firstTimeAutoshipPrice'].replace('$', '')
+        to_print = remove_break_lines(to_print)
+        writer.writerow(to_print)
+
+    return variations_products
 
 def remove_break_lines(dictionary):
     for key in dictionary.keys():
@@ -136,13 +156,13 @@ def get_product_links(params, cookies, headers, proxy):
     while max_try > 0:
         try:
             if proxy != '':
-                response = requests.get('https://www.chewy.com/plp/api/search', params=params, cookies=cookies, headers=headers, proxies=proxies, timeout=20)
+                response = requests.get('https://www.chewy.com/plp/api/search', params=params, cookies=cookies, headers=headers, proxies=proxies, timeout=21)
             else:
                 time.sleep(1/5)
-                response = requests.get('https://www.chewy.com/plp/api/search', params=params, cookies=cookies, headers=headers, timeout=20)
+                response = requests.get('https://www.chewy.com/plp/api/search', params=params, cookies=cookies, headers=headers, timeout=22)
 
             json_data = json.loads(response.text)
-            product_links = [ {'url': product['href'], 'status': 'normal'} for product in json_data['products']]
+            product_links = json_data['products'] 
             max_try = 0
         except:
             time.sleep(1)
@@ -160,10 +180,10 @@ def get_product_json_data(url, cookies, headers, proxy):
     while max_try > 0:
         try:
             if proxy != '':
-                response_prd_json = requests.get(url, cookies=cookies, headers=headers, proxies=proxies, timeout=20)
+                response_prd_json = requests.get(url, cookies=cookies, headers=headers, proxies=proxies, timeout=23)
             else:
                 time.sleep(1/5)
-                response_prd_json = requests.get(url, cookies=cookies, headers=headers, timeout=20)
+                response_prd_json = requests.get(url, cookies=cookies, headers=headers, timeout=24)
 
             detail_prd_json = json.loads(response_prd_json.content)
             if '__APOLLO_STATE__' not in detail_prd_json['pageProps'].keys():
@@ -388,27 +408,62 @@ def check_exist(rows, value):
             return True
     return False
 
-def main(category, perc, f_name, proxy):
+def create_error_product(product_data):
+    to_print={
+        'Status': 'Error', 
+        'Reference': product_data['href'],
+        'Product Code': '',
+        'Sku': product_data['partNumber'],
+        'url': product_data['href'],
+        'Product Name': product_data['name'],
+        'Price': product_data['price'],
+        'Stock': 'Instock' if product_data['inStock'] else 'Out of Stock', 
+        'Breadcrumb': '',
+        'Shipping': None if product_data['price'] == None else 0 if float(product_data['price']) > 49 else '4.95',
+        'Image': product_data['image'],
+        'Brand': product_data['manufacturer'],
+        'generic_name': '',
+        'product_form':'',
+        'drug_type': '', 
+        'prescription_item': 'yes' if product_data['isPrescription'] else 'no',
+        'autoship': '',
+        'promotional_text': '',
+        'promotional_information:': sub_header['sub_header'],
+        'pack_size': '',
+        'msrp': None if 'strikePrice' not in product_data.keys() else product_data['strikePrice'].replace('$','') if product_data['strikePrice'] != None else '',
+        'gtin': f"00000000000000",
+    }
+    return to_print
+
+
+def main(category, perc, f_name, proxy, runner_data = None):
     proxies = { 'https' : proxy } 
     unique_products = 0
     error_products = 0
     variations_products = 0
-    print('\n\nGETING WEB SITE BUILD PATH JUST WAIT PLEASE...')
-    sub_header = get_sub_header()
-    if sub_header == None:
-        log(f'Fatal error headers -c {category} -p {perc}')
-        exit(0)
 
-    sufix = get_path(sub_header['url'])
-    if sufix == None:
-        log(f'Fatal error sufix -c {category} -p {perc}')
-        exit(0)
+    if runner_data:
+        sub_header = runner_data
+        sufix = runner_data['sufix']
+    else:
+        print('\n\nGETING WEB SITE BUILD PATH JUST WAIT PLEASE...')
+        sub_header = get_sub_header()
+        if sub_header == None:
+            log(f'Fatal error headers -c {category} -p {perc}')
+            print('Finish')
+            exit(0)
+
+        sufix = get_path(sub_header['url'])
+        if sufix == None:
+            log(f'Fatal error sufix -c {category} -p {perc}')
+            print('Finish')
+            exit(0)
 
     session = requests.Session()
     if proxy != '':
-        response = session.get('https://www.chewy.com/', headers=headers, proxies=proxies, timeout=20)
+        response = session.get('https://www.chewy.com/', headers=headers, proxies=proxies, timeout=25)
     else:
-        response = session.get('https://www.chewy.com/', headers=headers, timeout=20)
+        response = session.get('https://www.chewy.com/', headers=headers, timeout=26)
 
     cookies = { 'KP_UIDz-ssn': f"{response.cookies.get_dict()['KP_UIDz-ssn']};" }
 
@@ -416,10 +471,10 @@ def main(category, perc, f_name, proxy):
 
     params['groupId'] = f'{category}'
     if proxy != '':
-        response = requests.get('https://www.chewy.com/plp/api/search', params=params, cookies=cookies, headers=headers, proxies=proxies, timeout=20)
+        response = requests.get('https://www.chewy.com/plp/api/search', params=params, cookies=cookies, headers=headers, proxies=proxies, timeout=27)
     else:
         time.sleep(1/2)
-        response = requests.get('https://www.chewy.com/plp/api/search', params=params, cookies=cookies, headers=headers, timeout=20)
+        response = requests.get('https://www.chewy.com/plp/api/search', params=params, cookies=cookies, headers=headers, timeout=28)
 
     json_data = json.loads(response.text)
     total = math.ceil(float(json_data['recordSetTotal']) / 36)
@@ -430,18 +485,16 @@ def main(category, perc, f_name, proxy):
     pageEnd = int(math.ceil((total / 100 * pageEnd)))
     if '-100' in pageStr:
         pageEnd = pageEnd + 1
-
     print(f'Category: {category}\nInitial Page: {pageInit}\nLast Page: {pageEnd}\nFile Name: {f_name}\nSite build "{sufix}"')
-
     print('ALL DONE, STARTING CRAWLER NOW...\n\n')
+
     time.sleep(1)
-    start_calc = datetime.now()
     with open(f_name, 'a') as f:
         for i in range(pageInit,pageEnd):
             params['from'] = f'{i * 36}'
             params['groupId'] = f'{category}'
             products_links_list_main = get_product_links(params, cookies, headers, proxy)
-            products_links_list = [{'url': link['url'], 'status': link['status']} for link in  products_links_list_main]
+            products_links_list = [{'url': link['href'], 'status':'normal' } for link in  products_links_list_main]
 
             for product_data in products_links_list:
                 product_url = product_data['url']
@@ -453,6 +506,9 @@ def main(category, perc, f_name, proxy):
                     log(f'Product url replace error in : {product_url}', product_url)
                     if product_status == 'Error':
                         error_products = error_products + 1
+                        to_print = create_error_product(product_data)
+                        variations_products = variations_products + write_to_file(f, to_print, head_lines, {'firstTimeAutoshipPrice': None if 'autoshipPrice'  not in product_data.keys() else product_data['autoshipPrice']})
+
                     if product_status == 'normal' and check_exist(products_links_list, product_url) == False:
                         products_links_list.append({'url': product_url, 'status': 'Error'})
                         error_products = error_products - 1
@@ -466,9 +522,9 @@ def main(category, perc, f_name, proxy):
                         sufix = get_path(sub_header['url'])
                         session = requests.Session()
                         if proxy != '': 
-                            response = session.get('https://www.chewy.com/', headers=headers, proxies=proxies, timeout=20)
+                            response = session.get('https://www.chewy.com/', headers=headers, proxies=proxies, timeout=29)
                         else:
-                            response = session.get('https://www.chewy.com/', headers=headers, timeout=20)
+                            response = session.get('https://www.chewy.com/', headers=headers, timeout=19)
 
                         cookies = { 'KP_UIDz-ssn': f"{response.cookies.get_dict()['KP_UIDz-ssn']};" }
                         json_backend_url = f'https://www.chewy.com/_next/data/chewy-pdp-ui-{sufix}/en-US/{product_url.replace("https://www.chewy.com/", "")}.json'
@@ -476,6 +532,8 @@ def main(category, perc, f_name, proxy):
                         if detail_json == None:
                             if product_status == 'Error':
                                 error_products = error_products + 1
+                                to_print = create_error_product(product_data)
+                                variations_products = variations_products + write_to_file(f, to_print, head_lines, {'firstTimeAutoshipPrice': None if 'autoshipPrice'  not in product_data.keys() else product_data['autoshipPrice']})
                             log(f'Error skip product list {str(json_backend_url)}', product_url)
                             if product_status == 'normal' and check_exist(products_links_list, product_url) == False:
                                 products_links_list.append({'url': product_url, 'status': 'Error'})
@@ -485,6 +543,9 @@ def main(category, perc, f_name, proxy):
                     if product_items == None:
                         if product_status == 'Error':
                             error_products = error_products + 1
+                            to_print = create_error_product(product_data)
+                            variations_products = variations_products + write_to_file(f, to_print, head_lines, {'firstTimeAutoshipPrice': None if 'autoshipPrice'  not in product_data.keys() else product_data['autoshipPrice']})
+
                         log(f'Error skip product_items in json url: {str(json_backend_url)}', product_url)
                         if product_status == 'normal' and check_exist(products_links_list, product_url) == False:
                             products_links_list.append({'url': product_url, 'status': 'Error'})
@@ -504,6 +565,9 @@ def main(category, perc, f_name, proxy):
                             log(f'product_general_info None in json url: {json_backend_url}', product_url)
                             if product_status == 'Error':
                                 error_products = error_products + 1
+                                to_print = create_error_product(product_data)
+                                variations_products = variations_products + write_to_file(f, to_print, head_lines, {'firstTimeAutoshipPrice': None if 'autoshipPrice'  not in product_data.keys() else product_data['autoshipPrice']})
+                                
                             if product_status == 'normal' and check_exist(products_links_list, product_url) == False:
                                 products_links_list.append({'url': product_url, 'status': 'Error'})
                             continue # skip this product and go to the next
@@ -520,6 +584,9 @@ def main(category, perc, f_name, proxy):
                             log(f'product_detail None in json url: {json_backend_url}', product_url)
                             if product_status == 'Error':
                                 error_products = error_products + 1
+                                to_print = create_error_product(product_data)
+                                variations_products = variations_products + write_to_file(f, to_print, head_lines, {'firstTimeAutoshipPrice': None if 'autoshipPrice'  not in product_data.keys() else product_data['autoshipPrice']})
+
                             if product_status == 'normal' and check_exist(products_links_list, product_url) == False:
                                 products_links_list.append({'url': product_url, 'status': 'Error'})
                             continue # skip this product and go to the next
@@ -601,6 +668,8 @@ def main(category, perc, f_name, proxy):
 
 
                             to_print={
+                                'Status': 'normal',
+                                'Reference': product_url, 
                                 'Product Code': data['entryID'],
                                 'Sku': data['partNumber'],
                                 'url': data['url'],
@@ -623,59 +692,48 @@ def main(category, perc, f_name, proxy):
                                 'gtin': f"0000000000000{data['gtin']}"[-14:],
                             }
 
-                            to_print = remove_break_lines(to_print)
-                            #print(json.dumps(to_print, indent=4))
-                            writer = csv.DictWriter(f, fieldnames=to_print)
-
+                            variations_products = variations_products + write_to_file(f, to_print, head_lines, data)
                             if head_lines == False:
                                 head_lines = True
-                                writer.writeheader()
-                            writer.writerow(to_print)
-                            if data['firstTimeAutoshipPrice'] != None:
-                                variations_products = variations_products + 1
-                                to_print['Product Name'] = f"{data['name']} - Autosend"
-                                to_print['Price'] = data['firstTimeAutoshipPrice']
-                                to_print = remove_break_lines(to_print)
-                                #print('--------')
-                                #print(json.dumps(to_print, indent=4))
-                                writer.writerow(to_print)
 
-                            variations_products = variations_products + 1
-                            current_calc = datetime.now()
-                            print('--------')
-                            print(f'Total unique product: {unique_products}/{len(products_links_list)}/{len(products_links_list_main)}')
-                            print(f'Total variations product: {variations_products}')
-                            print(f'Total errors {error_products}')
-                            print(f'Page speed {0 if variations_products == 0 else "%.2f" % ((current_calc - start_calc).total_seconds() / variations_products)}/s')
-                            print(f'Product speed {0 if unique_products == 0 else  "%.2f" %((current_calc - start_calc).total_seconds() / unique_products)}/s')
-                            print(f'Total time { "%.2f" % ((current_calc - start_calc).total_seconds() / 60)}min')
-                            print(f'Page {i+1}/{pageEnd}')
-                            print(f'Category {category}')
-                            print(f'Status {product_status}')
-                            print(f"Total Errors in Array: {len([p for p in products_links_list if p['status'] == 'Error'])}")
+                            report = {
+                                'uuid': process_uuid, 
+                                'total': unique_products, 
+                                'variations': variations_products, 
+                                'errors': error_products, 
+                                'category': category, 
+                                'page_init': pageInit, 
+                                'page_end': pageEnd
+                            }
+
+                            print(report)
                             url_done.add(product_active_url)
                         except Exception as e:
                            print(traceback.format_exc())
                            if product_status == 'Error':
-                               error_products = error_products + 1
+                                to_print = create_error_product(product_data)
+                                variations_products = variations_products + write_to_file(f, to_print, head_lines, {'firstTimeAutoshipPrice': None if 'autoshipPrice'  not in product_data.keys() else product_data['autoshipPrice']})
+                                error_products = error_products + 1
                            if product_status == 'normal' and check_exist(products_links_list, product_url) == False:
                                products_links_list.append({'url': product_url, 'status': 'Error'})
                            print('Error A', e)
                            print(traceback.format_exc())
-                           exit(0) 
-                           log(f'Error in A parte of code {str(e)}')
                 except KeyboardInterrupt:
                     exit(0)
                 except Exception as e:
                     print(traceback.format_exc())
                     if product_status == 'Error':
                         error_products = error_products + 1
+                        to_print = create_error_product(product_data)
+                        variations_products = variations_products + write_to_file(f, to_print, head_lines, {'firstTimeAutoshipPrice': None if 'autoshipPrice'  not in product_data.keys() else product_data['autoshipPrice']})
+
                     if product_status == 'normal' and check_exist(products_links_list, product_url) == False:
                         products_links_list.append({'url': product_url, 'status': 'Error'})
                     log(f'Error in B parte of code {str(e)}')
                     print('Error B', e)
-                print('--------')
-# start time = 02:15
+
+
+
 categories = {
     'dog': '288',
     'cat': '325',
@@ -697,22 +755,35 @@ if __name__ == '__main__':
     parser.add_argument("--percentage", "-p", help='[OPTIONAL] Percentual of pages can be 0-25, 25-50, 10-20 or any combinations between 0 and 100. Default 0-100.', type=str, default='0-100')
     parser.add_argument("--file", "-f", help='[OPTIONAL] File name(csv) to ouput result. Default [category]_chewy_[percentage]_YY-MM-DD-HH-mm-ss.csv', type=str)
     parser.add_argument("--proxy", "-x", help='[OPTIONAL] Proxy "https://user:pass@proxy_host:prox_port" or "hosting:port"', type=str, default='')
+    parser.add_argument("--sufix",  help='[OPTIONAL] Use only for runners', type=str, default='')
+    parser.add_argument("--promo",  help='[OPTIONAL] Use only for runners', type=str, default='')
+
     args=parser.parse_args()
     if args.category == None:
         print(parser.format_help())
+        print('Finish')
         exit(0)
 
     if args.category not in categories.keys():
         print(f'\n\n\nInvalid param "{args.category}"\n\n')
         print(parser.format_help())
+        print('Finish')
         exit(0)
     if args.file == None:
         args.file=f"{args.category}_chewy_{args.percentage}_{file_time}.csv"
 
-    main(categories[args.category], args.percentage, f'{path}/{args.file}', args.proxy)
-    print("Start Time =", start_time)
+    data = {}
+    if args.sufix != '' and args.promo != '':
+        data = {
+                'sub_header': args.promo,
+                'sufix': args.sufix,
+        }
 
+    main(categories[args.category], args.percentage, f'{path}/{args.file}', args.proxy, data)
+
+    print("Start Time =", start_time)
     now = datetime.now()
     current_time = now.strftime("%H:%M:%S")
     print("Current Time =", current_time)
+    print('Finish')
 

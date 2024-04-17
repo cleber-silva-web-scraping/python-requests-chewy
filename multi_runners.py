@@ -1,8 +1,61 @@
 import os
+import json
 import time
+import re
 from subprocess import PIPE, Popen
 from threading import Thread
 from datetime import datetime
+from rich.console import Console
+from rich.live import Live
+from rich.table import Table
+from app import get_path, get_sub_header
+
+reports = {}
+
+def create_process_table() -> Table:
+    table = Table(
+        "Category", "Total", "Expected", "% Done", "Errors", "Files/Proccess"
+    )
+    categories = {
+         '288': 'dog',
+         '325': 'cat',
+         '885': 'fish',
+         '941': 'bird',
+         '977': 'small-pet',
+        '1025': 'reptile',
+        '8403': 'farm-animal',
+        '1663': 'horse',
+        '2515': 'pharmacy',
+    }
+
+
+    for pet in reports.keys():
+        uuids = reports[pet]['records'].keys()
+        total = 0
+        expected = 0
+        done = '0%'
+        errors = 0
+        files = len(uuids)
+        for uuid in uuids:
+            total = total + reports[pet]['records'][uuid]['total']
+            errors = errors + reports[pet]['records'][uuid]['errors']
+            expected = expected + ((reports[pet]['records'][uuid]['page_end'] - reports[pet]['records'][uuid]['page_init']) * 36)
+            if expected > 0:
+                done = total / expected * 100
+
+        table.add_row(
+            categories[pet],
+            f'{total}',
+            f'{expected}',
+            f'{ "%.2f" % done}',
+            f'{errors}',
+            f'{files}'
+        )
+
+    return table
+
+
+
 
 path = '/'.join(__file__.split('/')[:-1])
 line_done = set()
@@ -27,11 +80,10 @@ def consolidate():
                         f_append.write(f'{line}\n')
                         f_append.close()
                 f.close()
-
-
+finished = False
 def run_command(command, wait):
+   global reports, finished 
    time.sleep(wait)
-   print('STARTING NEW PROCESS ***')
    os.environ['PYTHONUNBUFFERED'] = '1'
    process = Popen(command, shell=False, stdout=PIPE, env=os.environ) # Shell doesn't quite matter for this issue
    while True:
@@ -39,8 +91,14 @@ def run_command(command, wait):
       if process.poll() is not None:
          break
       if output:
-         print(output.decode("utf-8").replace('\n',''))
+            if 'uuid' in output.decode('utf-8'):
+                data = json.loads(output.decode('utf-8').replace("'", '"'))
+                print(data)
+                if data['category'] not in reports.keys():
+                    reports.update({ f"{data['category']}" : { 'records' : {} } })
+                reports[f"{data['category']}"]['records'].update({ f"{data['uuid']}" : data })
    rc = process.poll()
+   finished = True 
    return rc
 
 f = open(f"{path}/proxy.list", "r")
@@ -48,30 +106,51 @@ proxies = [p for p in f.read().split('\n') if p != '']
 f.close()
 commands = [] 
 
+sub_header = get_sub_header()
+if sub_header == None:
+    print(f'Fatal error headers')
+    print('Finish')
+    exit(0)
+
+sufix = get_path(sub_header['url'])
+if sufix == None:
+    print(f'Fatal error sufix')
+    print('Finish')
+    exit(0)
+promo = re.sub("\n|\r", " ", f"{sub_header['sub_header']}").strip()
+
+
 for pet in ['dog', 'cat']:
-    pets = [['python', f'{path}/app.py', '-c', pet,  '-p',  f'{index*2}-{(index+1)*2}', '--proxy', proxies.pop()] for index in range(0,50)]
+    pets = [['python', f'{path}/app.py', '-c', pet,  '-p',  f'{index*2}-{(index+1)*2}', '--sufix', sufix, '--promo', f"\"{promo}\"", '--proxy', proxies.pop()] for index in range(0,50)]
     for pet in pets:
         commands.append(pet)
 
 
-for pet in ['fish', 'bird', 'small-pet', 'reptile', 'horse', 'pharmacy', 'farm-animal']:
-    pets = [['python', f'{path}/app.py', '-c', pet,  '-p',  f'{index*5}-{(index+1)*5}', '--proxy', proxies.pop()] for index in range(0,20)]
+for pet in ['pharmacy', 'fish', 'bird', 'small-pet', 'reptile', 'horse',  'farm-animal']:
+    pets = [['python', f'{path}/app.py', '-c', pet,  '-p',  f'{index*5}-{(index+1)*5}', '--sufix', sufix, '--promo', f"\"{promo}\"", '--proxy', proxies.pop()] for index in range(0,20)]
+    #for pet in pets:
+    #    print(' '.join(pet))
     for pet in pets:
         commands.append(pet)
-
 
 now = datetime.now()
 start_time = now.strftime("%H:%M:%S")
 threads = []
 
 for index, cmd in enumerate(commands):
-    threads.append(Thread(target=run_command, args=(cmd,(index * 20))))
+    threads.append(Thread(target=run_command, args=(cmd,(index * 0))))
 
 for t in threads:
     t.start()
 
 for t in threads:
     t.join()
+
+#console = Console()
+#with Live(console=console, screen=True, auto_refresh=False) as live:
+#    while finished == False:
+#        live.update(create_process_table(), refresh=True)
+#        time.sleep(1)
 
 consolidate()
 
