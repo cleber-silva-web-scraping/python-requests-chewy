@@ -5,10 +5,10 @@ import re
 from subprocess import PIPE, Popen
 from threading import Thread
 from datetime import datetime
-#from rich.console import Console
-#from rich.live import Live
+from rich.console import Console
+from rich.live import Live
 from rich.table import Table
-from app import get_path, get_sub_header
+from helpers import get_path, get_sub_header
 
 reports = {}
 
