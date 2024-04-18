@@ -5,8 +5,8 @@ import re
 from subprocess import PIPE, Popen
 from threading import Thread
 from datetime import datetime
-from rich.console import Console
-from rich.live import Live
+#from rich.console import Console
+#from rich.live import Live
 from rich.table import Table
 from app import get_path, get_sub_header
 
@@ -60,7 +60,7 @@ def create_process_table() -> Table:
 path = '/'.join(__file__.split('/')[:-1])
 line_done = set()
 def consolidate():
-    headers = ['Product Code,Sku,url,Product Name,Price,Stock,Breadcrumb,Shipping,Image,Brand,generic_name,product_form,drug_type,prescription_item,autoship,promotional_text,promotional_information:,pack_size,msrp,gtin\n']
+    headers = ['Status, Reference, Product Code,Sku,url,Product Name,Price,Stock,Breadcrumb,Shipping,Image,Brand,generic_name,product_form,drug_type,prescription_item,autoship,promotional_text,promotional_information:,pack_size,msrp,gtin\n']
     pets =  ['dog', 'cat', 'fish', 'bird', 'small-pet', 'reptile', 'horse', 'pharmacy', 'farm-animal']
     for pet in pets:
         f = open(f'{path}/{pet}_all.csv', "w")
@@ -138,19 +138,19 @@ start_time = now.strftime("%H:%M:%S")
 threads = []
 
 for index, cmd in enumerate(commands):
-    threads.append(Thread(target=run_command, args=(cmd,(index * 0))))
+    threads.append(Thread(target=run_command, args=(cmd,(index))))
 
 for t in threads:
     t.start()
 
-for t in threads:
-    t.join()
+#for t in threads:
+#    t.join()
 
-#console = Console()
-#with Live(console=console, screen=True, auto_refresh=False) as live:
-#    while finished == False:
-#        live.update(create_process_table(), refresh=True)
-#        time.sleep(1)
+console = Console()
+with Live(console=console, screen=True, auto_refresh=False) as live:
+    while finished == False:
+        live.update(create_process_table(), refresh=True)
+        time.sleep(1)
 
 consolidate()
 
