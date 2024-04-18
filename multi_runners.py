@@ -93,7 +93,6 @@ def run_command(command, wait):
       if output:
             if 'uuid' in output.decode('utf-8'):
                 data = json.loads(output.decode('utf-8').replace("'", '"'))
-                print(data)
                 if data['category'] not in reports.keys():
                     reports.update({ f"{data['category']}" : { 'records' : {} } })
                 reports[f"{data['category']}"]['records'].update({ f"{data['uuid']}" : data })
@@ -138,7 +137,7 @@ start_time = now.strftime("%H:%M:%S")
 threads = []
 
 for index, cmd in enumerate(commands):
-    threads.append(Thread(target=run_command, args=(cmd,(index))))
+    threads.append(Thread(target=run_command, args=(cmd,(0))))
 
 for t in threads:
     t.start()
