@@ -11,6 +11,7 @@ from selenium.webdriver.common.by import By
 from datetime import datetime
 from selenium.webdriver.firefox.options import Options
 
+path = '/'.join(__file__.split('/')[:-1])
 def get_cookies(headers, proxy):
     proxies = { 'https' : proxy } 
     cookies = None
