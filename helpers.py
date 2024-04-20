@@ -11,6 +11,16 @@ from selenium.webdriver.common.by import By
 from datetime import datetime
 from selenium.webdriver.firefox.options import Options
 
+start_time = datetime.now()
+time.sleep(5)
+total_requests = 0
+def display_time():
+    global total_requests
+    total_requests = total_requests + 1
+    end_time = datetime.now()
+    avg =  '%.2f' % ((end_time - start_time).total_seconds() / total_requests)
+    print(f'{avg}s per request')
+
 path = '/'.join(__file__.split('/')[:-1])
 def get_cookies(headers, proxy):
     proxies = { 'https' : proxy } 
@@ -28,7 +38,7 @@ def get_cookies(headers, proxy):
         except:
             time.sleep(3)
             max_try = max_try - 1
-
+    display_time()
     return cookies
 def check_exist(rows, value):
     for row in rows:
@@ -85,6 +95,7 @@ def get_total_pages(params, cookies, headers, proxy = None):
         except:
             time.sleep(2)
             max_try = max_try - 1
+    display_time()
     return total
 def get_breadcrumb(detail_json):
     '''
@@ -314,6 +325,7 @@ def get_product_links(params, cookies, headers, proxy):
     if product_links == []:
         log(f'products_links_list None with params {params}')
 
+    display_time()
     return product_links
 
 def get_product_json_data(url, cookies, headers, proxy):
@@ -337,6 +349,7 @@ def get_product_json_data(url, cookies, headers, proxy):
         except:
             time.sleep(1)
             max_try = max_try - 1
+    display_time()
     return detail_prd_json
 
 def useFirstTimeAutoshipDiscount(advertisedPrice, autoshipFirstTimeDiscountPercent, autoshipFirstTimeDiscountMaxSavings):
