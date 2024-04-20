@@ -46,17 +46,17 @@ def check_exist(rows, value):
             return True
     return False
 
-def create_error_product(product_data):
+def create_error_product(product_data, min_price, price_is):
     try:
      to_print={
         'Product Code': '',
         'Sku': product_data['partNumber'],
         'url': product_data['href'],
+        'Price': product_data['price'],  
+        'Shipping': None if product_data['advertisedPrice'] == None else 0 if (1.00 * float(product_data['advertisedPrice'])) > float(min_price) else price_is,
         'Product Name': product_data['name'],
-        'Price': product_data['price'],
         'Stock': 'Instock' if product_data['inStock'] else 'Out of Stock', 
         'Breadcrumb': '',
-        'Shipping': None if product_data['price'] == None else 0 if float(product_data['price']) > 35 else '4.95',
         'Image': product_data['image'],
         'Brand': product_data['manufacturer'],
         'generic_name': '',
@@ -95,6 +95,7 @@ def get_total_pages(params, cookies, headers, proxy = None):
             max_try = max_try - 1
     display_time()
     return total
+
 def get_breadcrumb(detail_json):
     '''
         "Breadcrumb:288":{
@@ -153,6 +154,7 @@ def get_description_attribute(data, attribute_name):
         return data['descriptionAttributes'][attribute_name].replace('\"',"")
     except:
         return ''
+
 def get_product_items(detail_json):
     '''
         "Item:SXRlbToyNjgwMjU=":{
@@ -406,8 +408,12 @@ def get_path(url):
             time.sleep(5)
             elem = driver.find_element("xpath", "//*")
             source_code = elem.get_attribute("outerHTML")
+            data = {
+                    'sufix': str(source_code).split('chewy-pdp-ui-')[1].split('/')[0],
+                    'min_price': str(source_code).split('autoshipFirstTimeDiscount","value":"')[1].split('"')[0],
+                    'price_is': str(source_code).split('shipping is $')[1].split('. ')[0],
+            }
             driver.quit()
-            data = str(source_code).split('chewy-pdp-ui-')[1].split('/')[0]
             max_try = 0
         except:
             time.sleep(3)
@@ -432,6 +438,7 @@ def write_to_file(f, to_print, head_lines, data = None):
         variations_products = variations_products + 1
         to_print['Product Name'] = f"{data['name']} - Autosend"
         to_print['Price'] = data['firstTimeAutoshipPrice'].replace('$', '').replace(',','')
+        to_print['Shipping'] = 0
         to_print = remove_break_lines(to_print)
         writer.writerow(to_print)
 

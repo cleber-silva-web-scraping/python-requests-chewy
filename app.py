@@ -56,9 +56,11 @@ def main(category, perc, f_name, proxy, runner_data = None):
     error_products = 0
     variations_products = 0
 
-    if runner_data:
+    if runner_data != None:
         sub_header = runner_data
         sufix = runner_data['sufix']
+        min_price = runner_data['min_price']
+        price_is = runner_data['price_is']
     else:
         print('\n\nGETING WEB SITE BUILD PATH JUST WAIT PLEASE...')
         sub_header = get_sub_header()
@@ -67,11 +69,15 @@ def main(category, perc, f_name, proxy, runner_data = None):
             print('Finish')
             exit(0)
 
-        sufix = get_path(sub_header['url'])
-        if sufix == None:
+        page_data = get_path(sub_header['url'])
+        if page_data == None or page_data['sufix'] == None:
             log(f'Fatal error sufix -c {category} -p {perc}')
             print('Finish')
             exit(0)
+
+        sufix = page_data['sufix']
+        min_price = page_data['min_price']
+        price_is = page_data['price_is']
 
     head_lines = False
     cookies = get_cookies(headers, proxy)
@@ -121,7 +127,7 @@ def main(category, perc, f_name, proxy, runner_data = None):
                     log(f'Product url replace error in : {product_url}', product_url)
                     if product_status == 'Error':
                         error_products = error_products + 1
-                        to_print = create_error_product(product_data)
+                        to_print = create_error_product(product_data, min_price, price_is)
                         variations_products = variations_products + write_to_file(f, to_print, head_lines, {'firstTimeAutoshipPrice': None if 'autoshipPrice'  not in product_data.keys() else product_data['autoshipPrice']})
 
                     if product_status == 'normal' and check_exist(products_links_list, product_url) == False:
@@ -141,7 +147,7 @@ def main(category, perc, f_name, proxy, runner_data = None):
                         if detail_json == None:
                             if product_status == 'Error':
                                 error_products = error_products + 1
-                                to_print = create_error_product(product_data)
+                                to_print = create_error_product(product_data, min_price, price_is)
                                 variations_products = variations_products + write_to_file(f, to_print, head_lines, {'firstTimeAutoshipPrice': None if 'autoshipPrice'  not in product_data.keys() else product_data['autoshipPrice']})
                             log(f'Error skip product list {str(json_backend_url)}', product_url)
                             if product_status == 'normal' and check_exist(products_links_list, product_url) == False:
@@ -152,7 +158,7 @@ def main(category, perc, f_name, proxy, runner_data = None):
                     if product_items == None:
                         if product_status == 'Error':
                             error_products = error_products + 1
-                            to_print = create_error_product(product_data)
+                            to_print = create_error_product(product_data, min_price, price_is)
                             variations_products = variations_products + write_to_file(f, to_print, head_lines, {'firstTimeAutoshipPrice': None if 'autoshipPrice'  not in product_data.keys() else product_data['autoshipPrice']})
 
                         log(f'Error skip product_items in json url: {str(json_backend_url)}', product_url)
@@ -174,7 +180,7 @@ def main(category, perc, f_name, proxy, runner_data = None):
                             log(f'product_general_info None in json url: {json_backend_url}', product_url)
                             if product_status == 'Error':
                                 error_products = error_products + 1
-                                to_print = create_error_product(product_data)
+                                to_print = create_error_product(product_data, min_price, price_is)
                                 variations_products = variations_products + write_to_file(f, to_print, head_lines, {'firstTimeAutoshipPrice': None if 'autoshipPrice'  not in product_data.keys() else product_data['autoshipPrice']})
                                 
                             if product_status == 'normal' and check_exist(products_links_list, product_url) == False:
@@ -193,7 +199,7 @@ def main(category, perc, f_name, proxy, runner_data = None):
                             log(f'product_detail None in json url: {json_backend_url}', product_url)
                             if product_status == 'Error':
                                 error_products = error_products + 1
-                                to_print = create_error_product(product_data)
+                                to_print = create_error_product(product_data, min_price, price_is)
                                 variations_products = variations_products + write_to_file(f, to_print, head_lines, {'firstTimeAutoshipPrice': None if 'autoshipPrice'  not in product_data.keys() else product_data['autoshipPrice']})
 
                             if product_status == 'normal' and check_exist(products_links_list, product_url) == False:
@@ -275,16 +281,15 @@ def main(category, perc, f_name, proxy, runner_data = None):
                                 if display == False:
                                     data['firstTimeAutoshipPrice'] = data['advertisedPrice']    
 
-
                             to_print={
                                 'Product Code': data['entryID'],
                                 'Sku': data['partNumber'],
                                 'url': data['url'],
-                                'Product Name': data['name'],
                                 'Price': data['advertisedPrice'],
+                                'Shipping': None if data['advertisedPrice'] == None else 0 if (1.00 * float(data['advertisedPrice'])) > float(min_price) else price_is,
+                                'Product Name': data['name'],
                                 'Stock': 'Instock' if data['inStock'] else 'Out of Stock', 
                                 'Breadcrumb': breadcrumb,
-                                'Shipping': None if data['advertisedPrice'] == None else 0 if float(data['advertisedPrice']) > 49 else '4.95',
                                 'Image': data['images'],
                                 'Brand': data['manufacturerName'],
                                 'generic_name': get_description_attribute(data,'Generic Name'),
@@ -306,7 +311,7 @@ def main(category, perc, f_name, proxy, runner_data = None):
                         except Exception as e:
                            print(traceback.format_exc())
                            if product_status == 'Error':
-                                to_print = create_error_product(product_data)
+                                to_print = create_error_product(product_data, min_price, price_is)
                                 variations_products = variations_products + write_to_file(f, to_print, head_lines, {'firstTimeAutoshipPrice': None if 'autoshipPrice'  not in product_data.keys() else product_data['autoshipPrice']})
                                 error_products = error_products + 1
                            if product_status == 'normal' and check_exist(products_links_list, product_url) == False:
@@ -319,7 +324,7 @@ def main(category, perc, f_name, proxy, runner_data = None):
                     print(traceback.format_exc())
                     if product_status == 'Error':
                         error_products = error_products + 1
-                        to_print = create_error_product(product_data)
+                        to_print = create_error_product(product_data, min_price, price_is)
                         variations_products = variations_products + write_to_file(f, to_print, head_lines, {'firstTimeAutoshipPrice': None if 'autoshipPrice'  not in product_data.keys() else product_data['autoshipPrice']})
 
                     if product_status == 'normal' and check_exist(products_links_list, product_url) == False:
@@ -352,6 +357,8 @@ if __name__ == '__main__':
     parser.add_argument("--proxy", "-x", help='[OPTIONAL] Proxy "https://user:pass@proxy_host:prox_port" or "hosting:port"', type=str, default='')
     parser.add_argument("--sufix",  help='[OPTIONAL] Use only for runners', type=str, default='')
     parser.add_argument("--promo",  help='[OPTIONAL] Use only for runners', type=str, default='')
+    parser.add_argument("--price_is",  help='[OPTIONAL] Use only for runners', type=str, default=0.0)
+    parser.add_argument("--min_price",  help='[OPTIONAL] Use only for runners', type=str, default=0.0)
 
     args=parser.parse_args()
     if args.category == None:
@@ -372,7 +379,9 @@ if __name__ == '__main__':
         data = {
                 'sub_header': args.promo,
                 'sufix': args.sufix,
-        }
+                'min_price': float(args.min_price) * 1.0, 
+                'price_is': float(args.price_is) * 1.0,
+        }   
 
     main(categories[args.category], args.percentage, f'{path}/{args.file}', args.proxy, data)
 

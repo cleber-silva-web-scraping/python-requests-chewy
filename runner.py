@@ -12,7 +12,7 @@ path = '/'.join(__file__.split('/')[:-1])
 line_done = set()
 
 def consolidate():
-    headers = ['Product Code,Sku,url,Product Name,Price,Stock,Breadcrumb,Shipping,Image,Brand,generic_name,product_form,drug_type,prescription_item,autoship,promotional_text,promotional_information:,pack_size,msrp,gtin\n']
+    headers = ['Product Code,Sku,url,Price,Shipping,Product Name,Stock,Breadcrumb,Image,Brand,generic_name,product_form,drug_type,prescription_item,autoship,promotional_text,promotional_information:,pack_size,msrp,gtin\n']
     pets =  ['dog', 'cat', 'fish', 'bird', 'small-pet', 'reptile', 'horse', 'pharmacy', 'farm-animal']
     file_time = datetime.now().strftime("%y%m%d%H")
 
@@ -63,21 +63,28 @@ if sub_header == None:
     print('Finish')
     exit(0)
 
-sufix = get_path(sub_header['url'])
-if sufix == None:
+site_data = get_path(sub_header['url'])
+print(site_data)
+if site_data == None or site_data['sufix'] == None:
     print(f'Fatal error sufix')
     print('Finish')
     exit(0)
+
+
+sufix = site_data['sufix']
+min_price = site_data['min_price']
+price_is = site_data['price_is']
+
 promo = re.sub("\n|\r", " ", f"{sub_header['sub_header']}").strip()
 
 for pet in ['dog', 'cat']:
-    pets = [['python', f'{path}/app.py', '-c', pet,  '-p',  f'{index*2}-{(index+1)*2}', '--sufix', sufix, '--promo', f"\"{promo}\"", '--proxy', proxies.pop()] for index in range(0,50)]
+    pets = [['python', f'{path}/app.py', '--min_price', min_price, '--price_is', price_is, '-c', pet,  '-p',  f'{index*2}-{(index+1)*2}', '--sufix', sufix, '--promo', f"\"{promo}\"", '--proxy', proxies.pop()] for index in range(0,50)]
     for pet in pets:
         commands.append(pet)
 
 
 for pet in ['pharmacy', 'fish', 'bird', 'small-pet', 'reptile', 'horse',  'farm-animal']:
-    pets = [['python', f'{path}/app.py', '-c', pet,  '-p',  f'{index*5}-{(index+1)*5}', '--sufix', sufix, '--promo', f"\"{promo}\"", '--proxy', proxies.pop()] for index in range(0,20)]
+    pets = [['python', f'{path}/app.py', '--min_price', min_price, '--price_is', price_is, '-c', pet,  '-p',  f'{index*5}-{(index+1)*5}', '--sufix', sufix, '--promo', f"\"{promo}\"", '--proxy', proxies.pop()] for index in range(0,20)]
     for pet in pets:
         commands.append(pet)
  
