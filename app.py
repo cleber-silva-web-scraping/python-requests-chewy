@@ -106,6 +106,7 @@ def main(category, perc, f_name, proxy, runner_data = None):
             products_links_list_main = get_product_links(params, cookies, headers, proxy)
             products_links_list = []
             for product_link in products_links_list_main:
+                log(f"Main Url: {product_link['href']}")
                 product_link.update({'url': product_link['href'], 'status':'normal' })
                 products_links_list.append(product_link)
 
@@ -276,8 +277,6 @@ def main(category, perc, f_name, proxy, runner_data = None):
 
 
                             to_print={
-                                'Status': 'normal',
-                                'Reference': product_url, 
                                 'Product Code': data['entryID'],
                                 'Sku': data['partNumber'],
                                 'url': data['url'],
@@ -336,6 +335,7 @@ def main(category, perc, f_name, proxy, runner_data = None):
                         'errors': error_products, 
                         'category': category, 
                         'page_init': pageInit, 
+                        'page_act': i, 
                         'page_end': pageEnd
                     }
 
