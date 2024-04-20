@@ -330,18 +330,16 @@ def main(category, perc, f_name, proxy, runner_data = None):
 
                 report = {
                         'uuid': process_uuid, 
-                        'total': unique_products, 
-                        'variations': variations_products, 
-                        'errors': error_products, 
-                        'category': category, 
-                        'page_init': pageInit, 
-                        'page': i, 
-                        'page_end': pageEnd
+                        'total': str(unique_products).rjust(5, "0"), 
+                        'variations': str(variations_products).rjust(3, "0"), 
+                        'errors': str(error_products).rjust(5, "0"), 
+                        'category': str(category).rjust(5, "0"), 
+                        'page_init': str(pageInit).rjust(3, "0"), 
+                        'page': str(i).rjust(3, "0"), 
+                        'page_end': str(pageEnd).rjust(3, "0")
                     }
 
                 print(report)
-
-
 
 
 if __name__ == '__main__':

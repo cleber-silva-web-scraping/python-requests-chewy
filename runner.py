@@ -28,11 +28,12 @@ def consolidate():
                 lines = [l for l in f.read().split('\n') if l != '']
                 for line in lines:
                     if f'{pet}|{line}' not in line_done and 'generic_name' not in line:
-                        line_done.add(f'{pet}|{line}')
+                        line_done.add(f'{line}')
                         f_append = open(f'{path}/chewy_all_{file_time}.csv', 'a')
                         f_append.write(f'{line}\n')
                         f_append.close()
                 f.close()
+                os.unlink(f"{path}/{file}")
 
 def run_command(command, wait):
    time.sleep(wait)
