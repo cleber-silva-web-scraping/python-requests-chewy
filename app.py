@@ -335,7 +335,7 @@ def main(category, perc, f_name, proxy, runner_data = None):
                         'errors': error_products, 
                         'category': category, 
                         'page_init': pageInit, 
-                        'page_act': i, 
+                        'page': i, 
                         'page_end': pageEnd
                     }
 
