@@ -1,18 +1,24 @@
 import os
+import json
 import time
+import re
 from subprocess import PIPE, Popen
 from threading import Thread
 from datetime import datetime
+from helpers import get_path, get_sub_header
 
+reports = {}
 path = '/'.join(__file__.split('/')[:-1])
 line_done = set()
+
 def consolidate():
     headers = ['Product Code,Sku,url,Product Name,Price,Stock,Breadcrumb,Shipping,Image,Brand,generic_name,product_form,drug_type,prescription_item,autoship,promotional_text,promotional_information:,pack_size,msrp,gtin\n']
     pets =  ['dog', 'cat', 'fish', 'bird', 'small-pet', 'reptile', 'horse', 'pharmacy', 'farm-animal']
-    for pet in pets:
-        f = open(f'{path}/{pet}_all.csv', "w")
-        f.writelines(headers)
-        f.close()
+    file_time = datetime.now().strftime("%y%m%d%H")
+
+    f = open(f'{path}/chewy_all_{file_time}.csv', "w")
+    f.writelines(headers)
+    f.close()
 
     for file in os.listdir(path):
         if '_chewy_' in file and file.endswith(".csv"):
@@ -23,15 +29,13 @@ def consolidate():
                 for line in lines:
                     if f'{pet}|{line}' not in line_done and 'generic_name' not in line:
                         line_done.add(f'{pet}|{line}')
-                        f_append = open(f'{pet}_all.csv', 'a')
+                        f_append = open(f'{path}/chewy_all_{file_time}.csv', 'a')
                         f_append.write(f'{line}\n')
                         f_append.close()
                 f.close()
 
-
 def run_command(command, wait):
    time.sleep(wait)
-   print('STARTING NEW PROCESS ***')
    os.environ['PYTHONUNBUFFERED'] = '1'
    process = Popen(command, shell=False, stdout=PIPE, env=os.environ) # Shell doesn't quite matter for this issue
    while True:
@@ -39,33 +43,49 @@ def run_command(command, wait):
       if process.poll() is not None:
          break
       if output:
-         print(output.decode("utf-8").replace('\n',''))
+            line = output.decode('utf-8')
+            if 'uuid' in line:
+                data = json.loads(line.replace("'", '"'))
+                print(data)
    rc = process.poll()
    return rc
 
 f = open(f"{path}/proxy.list", "r")
 proxies = [p for p in f.read().split('\n') if p != '']
+proxies.reverse()
 f.close()
 commands = [] 
 
+sub_header = get_sub_header()
+if sub_header == None:
+    print(f'Fatal error headers')
+    print('Finish')
+    exit(0)
+
+sufix = get_path(sub_header['url'])
+if sufix == None:
+    print(f'Fatal error sufix')
+    print('Finish')
+    exit(0)
+promo = re.sub("\n|\r", " ", f"{sub_header['sub_header']}").strip()
+
 for pet in ['dog', 'cat']:
-    pets = [['python', f'{path}/app.py', '-c', pet,  '-p',  f'{index*2}-{(index+1)*2}', '--proxy', proxies.pop()] for index in range(0,50)]
+    pets = [['python', f'{path}/app.py', '-c', pet,  '-p',  f'{index*2}-{(index+1)*2}', '--sufix', sufix, '--promo', f"\"{promo}\"", '--proxy', proxies.pop()] for index in range(0,50)]
     for pet in pets:
         commands.append(pet)
 
 
-for pet in ['fish', 'bird', 'small-pet', 'reptile', 'horse', 'pharmacy', 'farm-animal']:
-    pets = [['python', f'{path}/app.py', '-c', pet,  '-p',  f'{index*5}-{(index+1)*5}', '--proxy', proxies.pop()] for index in range(0,20)]
+for pet in ['pharmacy', 'fish', 'bird', 'small-pet', 'reptile', 'horse',  'farm-animal']:
+    pets = [['python', f'{path}/app.py', '-c', pet,  '-p',  f'{index*5}-{(index+1)*5}', '--sufix', sufix, '--promo', f"\"{promo}\"", '--proxy', proxies.pop()] for index in range(0,20)]
     for pet in pets:
         commands.append(pet)
-
-
+ 
 now = datetime.now()
 start_time = now.strftime("%H:%M:%S")
 threads = []
 
 for index, cmd in enumerate(commands):
-    threads.append(Thread(target=run_command, args=(cmd,(index * 20))))
+    threads.append(Thread(target=run_command, args=(cmd,(0))))
 
 for t in threads:
     t.start()
