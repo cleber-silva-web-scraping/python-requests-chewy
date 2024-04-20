@@ -196,8 +196,7 @@ Other categories will be split for 5%.
     ### The result in folder:
     ![image](https://github.com/cleber-silva-web-scraping/python-requests-chewy/assets/6031795/c14ac790-68f3-452b-94d2-3e9845fc8b9f)
 
-    ### Files per category `[category]_all.csv`(using `multi_runners.py`)
-    ![image](https://github.com/cleber-silva-web-scraping/python-requests-chewy/assets/6031795/0ee6d8ef-6577-4103-a991-2e063ead877a)
-
+    ### File with all data processed `chewy_all_[date_time].csv`(using `runner.py`)
+    ![image](https://github.com/cleber-silva-web-scraping/python-requests-chewy/assets/6031795/3c14f0f4-899a-46e3-9b41-840c219b4f6b)
 
 
