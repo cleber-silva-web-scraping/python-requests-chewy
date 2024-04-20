@@ -191,8 +191,7 @@ Other categories will be split for 5%.
     `$ python runner.py`
 
     ### The output:
-    ![image](https://github.com/cleber-silva-web-scraping/python-requests-chewy/assets/6031795/c7efb3d6-3e1d-4ca9-acdc-ed7b3fa1091e)
-
+    ![image](https://github.com/cleber-silva-web-scraping/python-requests-chewy/assets/6031795/108aa298-2e34-40e8-a174-419d95e3c151)
 
     ### The result in folder:
     ![image](https://github.com/cleber-silva-web-scraping/python-requests-chewy/assets/6031795/c14ac790-68f3-452b-94d2-3e9845fc8b9f)
