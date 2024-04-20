@@ -188,7 +188,7 @@ Other categories will be split for 5%.
     ```
     * To run
       
-    `$ python multi_runners.py`
+    `$ python runner.py`
 
     ### The output:
     ![image](https://github.com/cleber-silva-web-scraping/python-requests-chewy/assets/6031795/c7efb3d6-3e1d-4ca9-acdc-ed7b3fa1091e)
