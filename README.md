@@ -54,7 +54,7 @@ The categories dog and cat are larger, so the runner will split processes to run
 
 Other categories will be split for 5%.
 
-#### How to run **multi_runnners.py**
+#### How to run **runnner.py**
 
 * prepare a file called `proxy.list` you can see an example at `proxy.list.example`
   - example
@@ -72,7 +72,7 @@ Other categories will be split for 5%.
     ![image](https://github.com/cleber-silva-web-scraping/python-requests-chewy/assets/6031795/3cc9f737-a175-4819-bebb-20ab6c68be2e)
 
     * for the current configuration you will need **240** different proxies to all run on the same machine (source) 
-    * **multi_runner.py** will prepare **240** prompts like this:
+    * **runner.py** will prepare **240** prompts like this:
     ```
       python app.py -c dog -p 0-2 --proxy 154.202.96.xxx:8080
       python app.py -c dog -p 2-4 --proxy 154.202.97.xxx:8080
