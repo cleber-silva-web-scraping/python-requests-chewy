@@ -74,6 +74,7 @@ def consolidate():
                 f = open(f'{path}/{file}')
                 lines = [l for l in f.read().split('\n') if l != '']
                 for line in lines:
+                    print(line)
                     if f'{pet}|{line}' not in line_done and 'generic_name' not in line:
                         line_done.add(f'{pet}|{line}')
                         f_append = open(f'{pet}_all.csv', 'a')
@@ -91,17 +92,22 @@ def run_command(command, wait):
       if process.poll() is not None:
          break
       if output:
-            if 'uuid' in output.decode('utf-8'):
-                data = json.loads(output.decode('utf-8').replace("'", '"'))
+            line = output.decode('utf-8')
+            if 'uuid' in line:
+                data = json.loads(line.replace("'", '"'))
+                print(data)
                 if data['category'] not in reports.keys():
                     reports.update({ f"{data['category']}" : { 'records' : {} } })
                 reports[f"{data['category']}"]['records'].update({ f"{data['uuid']}" : data })
+            else:
+                print(line)
    rc = process.poll()
    finished = True 
    return rc
 
 f = open(f"{path}/proxy.list", "r")
 proxies = [p for p in f.read().split('\n') if p != '']
+proxies.reverse()
 f.close()
 commands = [] 
 
@@ -120,18 +126,18 @@ promo = re.sub("\n|\r", " ", f"{sub_header['sub_header']}").strip()
 
 
 for pet in ['dog', 'cat']:
-    pets = [['python', f'{path}/app.py', '-c', pet,  '-p',  f'{index*2}-{(index+1)*2}', '--sufix', sufix, '--promo', f"\"{promo}\"", '--proxy', proxies.pop()] for index in range(0,50)]
+    pets = [['python', f'{path}/app.py', '-c', pet,  '-p',  f'{index*5}-{(index+1)*5}', '--sufix', sufix, '--promo', f"\"{promo}\"", '--proxy', proxies.pop()] for index in range(0,20)]
     for pet in pets:
         commands.append(pet)
 
 
 for pet in ['pharmacy', 'fish', 'bird', 'small-pet', 'reptile', 'horse',  'farm-animal']:
-    pets = [['python', f'{path}/app.py', '-c', pet,  '-p',  f'{index*5}-{(index+1)*5}', '--sufix', sufix, '--promo', f"\"{promo}\"", '--proxy', proxies.pop()] for index in range(0,20)]
+    pets = [['python', f'{path}/app.py', '-c', pet,  '-p',  f'{index*10}-{(index+1)*10}', '--sufix', sufix, '--promo', f"\"{promo}\"", '--proxy', proxies.pop()] for index in range(0,10)]
     #for pet in pets:
     #    print(' '.join(pet))
     for pet in pets:
         commands.append(pet)
-
+ 
 now = datetime.now()
 start_time = now.strftime("%H:%M:%S")
 threads = []
@@ -142,14 +148,14 @@ for index, cmd in enumerate(commands):
 for t in threads:
     t.start()
 
-#for t in threads:
-#    t.join()
+for t in threads:
+    t.join()
 
-console = Console()
-with Live(console=console, screen=True, auto_refresh=False) as live:
-    while finished == False:
-        live.update(create_process_table(), refresh=True)
-        time.sleep(1)
+#console = Console()
+#with Live(console=console, screen=True, auto_refresh=False) as live:
+#    while finished == False:
+#        live.update(create_process_table(), refresh=True)
+#        time.sleep(1)
 
 consolidate()
 
