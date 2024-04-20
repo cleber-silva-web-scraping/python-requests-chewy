@@ -49,8 +49,6 @@ def check_exist(rows, value):
 def create_error_product(product_data):
     try:
      to_print={
-        'Status': 'Error', 
-        'Reference': product_data['href'],
         'Product Code': '',
         'Sku': product_data['partNumber'],
         'url': product_data['href'],
@@ -451,7 +449,7 @@ def remove_break_lines(dictionary):
 def log(message, product_url=None):
     log_now = datetime.now()
     log_time = log_now.strftime("%H:%M:%S")
-    f = open(f"{path}/app_error.log", "a")
+    f = open(f"{path}/process.log", "a")
     f.write(f'[{log_time}] {message}\n')
     f.close()
     if product_url:

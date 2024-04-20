@@ -5,62 +5,14 @@ import re
 from subprocess import PIPE, Popen
 from threading import Thread
 from datetime import datetime
-from rich.console import Console
-from rich.live import Live
-from rich.table import Table
 from helpers import get_path, get_sub_header
 
 reports = {}
-
-def create_process_table() -> Table:
-    table = Table(
-        "Category", "Total", "Expected", "% Done", "Errors", "Files/Proccess"
-    )
-    categories = {
-         '288': 'dog',
-         '325': 'cat',
-         '885': 'fish',
-         '941': 'bird',
-         '977': 'small-pet',
-        '1025': 'reptile',
-        '8403': 'farm-animal',
-        '1663': 'horse',
-        '2515': 'pharmacy',
-    }
-
-
-    for pet in reports.keys():
-        uuids = reports[pet]['records'].keys()
-        total = 0
-        expected = 0
-        done = '0%'
-        errors = 0
-        files = len(uuids)
-        for uuid in uuids:
-            total = total + reports[pet]['records'][uuid]['total']
-            errors = errors + reports[pet]['records'][uuid]['errors']
-            expected = expected + ((reports[pet]['records'][uuid]['page_end'] - reports[pet]['records'][uuid]['page_init']) * 36)
-            if expected > 0:
-                done = total / expected * 100
-
-        table.add_row(
-            categories[pet],
-            f'{total}',
-            f'{expected}',
-            f'{ "%.2f" % done}',
-            f'{errors}',
-            f'{files}'
-        )
-
-    return table
-
-
-
-
 path = '/'.join(__file__.split('/')[:-1])
 line_done = set()
+
 def consolidate():
-    headers = ['Status, Reference, Product Code,Sku,url,Product Name,Price,Stock,Breadcrumb,Shipping,Image,Brand,generic_name,product_form,drug_type,prescription_item,autoship,promotional_text,promotional_information:,pack_size,msrp,gtin\n']
+    headers = ['Product Code,Sku,url,Product Name,Price,Stock,Breadcrumb,Shipping,Image,Brand,generic_name,product_form,drug_type,prescription_item,autoship,promotional_text,promotional_information:,pack_size,msrp,gtin\n']
     pets =  ['dog', 'cat', 'fish', 'bird', 'small-pet', 'reptile', 'horse', 'pharmacy', 'farm-animal']
     file_time = datetime.now().strftime("%y%m%d%H")
 
@@ -82,12 +34,7 @@ def consolidate():
                         f_append.close()
                 f.close()
 
-consolidate()
-
-exit(0)
-finished = False
 def run_command(command, wait):
-   global reports, finished 
    time.sleep(wait)
    os.environ['PYTHONUNBUFFERED'] = '1'
    process = Popen(command, shell=False, stdout=PIPE, env=os.environ) # Shell doesn't quite matter for this issue
@@ -100,13 +47,7 @@ def run_command(command, wait):
             if 'uuid' in line:
                 data = json.loads(line.replace("'", '"'))
                 print(data)
-                if data['category'] not in reports.keys():
-                    reports.update({ f"{data['category']}" : { 'records' : {} } })
-                reports[f"{data['category']}"]['records'].update({ f"{data['uuid']}" : data })
-            else:
-                print(line)
    rc = process.poll()
-   finished = True 
    return rc
 
 f = open(f"{path}/proxy.list", "r")
@@ -128,7 +69,6 @@ if sufix == None:
     exit(0)
 promo = re.sub("\n|\r", " ", f"{sub_header['sub_header']}").strip()
 
-
 for pet in ['dog', 'cat']:
     pets = [['python', f'{path}/app.py', '-c', pet,  '-p',  f'{index*2}-{(index+1)*2}', '--sufix', sufix, '--promo', f"\"{promo}\"", '--proxy', proxies.pop()] for index in range(0,50)]
     for pet in pets:
@@ -137,8 +77,6 @@ for pet in ['dog', 'cat']:
 
 for pet in ['pharmacy', 'fish', 'bird', 'small-pet', 'reptile', 'horse',  'farm-animal']:
     pets = [['python', f'{path}/app.py', '-c', pet,  '-p',  f'{index*5}-{(index+1)*5}', '--sufix', sufix, '--promo', f"\"{promo}\"", '--proxy', proxies.pop()] for index in range(0,20)]
-    #for pet in pets:
-    #    print(' '.join(pet))
     for pet in pets:
         commands.append(pet)
  
@@ -154,12 +92,6 @@ for t in threads:
 
 for t in threads:
     t.join()
-
-#console = Console()
-#with Live(console=console, screen=True, auto_refresh=False) as live:
-#    while finished == False:
-#        live.update(create_process_table(), refresh=True)
-#        time.sleep(1)
 
 consolidate()
 
