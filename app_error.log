@@ -40,3 +40,46 @@ KeyError: '__APOLLO_STATE__'
 [12:06:41] products_links_list None with params {'groupResults': 'true', 'count': '36', 'include': 'items', 'fields[0]': 'PRODUCT_CARD_DETAILS', 'omitNullEntries': 'true', 'catalogId': '1004', 'from': '2052', 'sort': 'byRelevance', 'groupId': '1025'}
 [12:11:05] products_links_list None with params {'groupResults': 'true', 'count': '36', 'include': 'items', 'fields[0]': 'PRODUCT_CARD_DETAILS', 'omitNullEntries': 'true', 'catalogId': '1004', 'from': '3348', 'sort': 'byRelevance', 'groupId': '1663'}
 [13:40:31] products_links_list None with params {'groupResults': 'true', 'count': '36', 'include': 'items', 'fields[0]': 'PRODUCT_CARD_DETAILS', 'omitNullEntries': 'true', 'catalogId': '1004', 'from': '10008', 'sort': 'byRelevance', 'groupId': '325'}
+[03:10:58] products_links_list None with params {'groupResults': 'true', 'count': '36', 'include': 'items', 'fields[0]': 'PRODUCT_CARD_DETAILS', 'omitNullEntries': 'true', 'catalogId': '1004', 'from': '1908', 'sort': 'byRelevance', 'groupId': '977'}
+[03:12:59] products_links_list None with params {'groupResults': 'true', 'count': '36', 'include': 'items', 'fields[0]': 'PRODUCT_CARD_DETAILS', 'omitNullEntries': 'true', 'catalogId': '1004', 'from': '1584', 'sort': 'byRelevance', 'groupId': '8403'}
+[03:21:33] products_links_list None with params {'groupResults': 'true', 'count': '36', 'include': 'items', 'fields[0]': 'PRODUCT_CARD_DETAILS', 'omitNullEntries': 'true', 'catalogId': '1004', 'from': '2736', 'sort': 'byRelevance', 'groupId': '885'}
+[03:42:50] products_links_list None with params {'groupResults': 'true', 'count': '36', 'include': 'items', 'fields[0]': 'PRODUCT_CARD_DETAILS', 'omitNullEntries': 'true', 'catalogId': '1004', 'from': '864', 'sort': 'byRelevance', 'groupId': '2515'}
+[03:44:45] products_links_list None with params {'groupResults': 'true', 'count': '36', 'include': 'items', 'fields[0]': 'PRODUCT_CARD_DETAILS', 'omitNullEntries': 'true', 'catalogId': '1004', 'from': '3564', 'sort': 'byRelevance', 'groupId': '941'}
+[03:55:21] products_links_list None with params {'groupResults': 'true', 'count': '36', 'include': 'items', 'fields[0]': 'PRODUCT_CARD_DETAILS', 'omitNullEntries': 'true', 'catalogId': '1004', 'from': '10008', 'sort': 'byRelevance', 'groupId': '288'}
+[04:08:23] products_links_list None with params {'groupResults': 'true', 'count': '36', 'include': 'items', 'fields[0]': 'PRODUCT_CARD_DETAILS', 'omitNullEntries': 'true', 'catalogId': '1004', 'from': '2016', 'sort': 'byRelevance', 'groupId': '1025'}
+[04:08:25] products_links_list None with params {'groupResults': 'true', 'count': '36', 'include': 'items', 'fields[0]': 'PRODUCT_CARD_DETAILS', 'omitNullEntries': 'true', 'catalogId': '1004', 'from': '2052', 'sort': 'byRelevance', 'groupId': '1025'}
+[04:10:55] products_links_list None with params {'groupResults': 'true', 'count': '36', 'include': 'items', 'fields[0]': 'PRODUCT_CARD_DETAILS', 'omitNullEntries': 'true', 'catalogId': '1004', 'from': '3348', 'sort': 'byRelevance', 'groupId': '1663'}
+[04:37:28] products_links_list None with params {'groupResults': 'true', 'count': '36', 'include': 'items', 'fields[0]': 'PRODUCT_CARD_DETAILS', 'omitNullEntries': 'true', 'catalogId': '1004', 'from': '10008', 'sort': 'byRelevance', 'groupId': '325'}
+[11:54:41] products_links_list None with params {'groupResults': 'true', 'count': '36', 'include': 'items', 'fields[0]': 'PRODUCT_CARD_DETAILS', 'omitNullEntries': 'true', 'catalogId': '1004', 'from': '2016', 'sort': 'byRelevance', 'groupId': '1025'}
+[11:54:43] products_links_list None with params {'groupResults': 'true', 'count': '36', 'include': 'items', 'fields[0]': 'PRODUCT_CARD_DETAILS', 'omitNullEntries': 'true', 'catalogId': '1004', 'from': '2052', 'sort': 'byRelevance', 'groupId': '1025'}
+[12:00:34] Erroe on get product default: Traceback (most recent call last):
+  File "/home/noct/python-requests-chewy-v2/helpers.py", line 197, in get_product_general_info
+    return [detail_json['pageProps']['__APOLLO_STATE__'][product] for product in detail_json['pageProps']['__APOLLO_STATE__'] if "Product" in product][0]
+                                                                                 ~~~~~~~~~~~^^^^^^^^^^^^^
+TypeError: 'NoneType' object is not subscriptable
+
+[12:00:34] product_general_info None in json url: https://www.chewy.com/_next/data/chewy-pdp-ui-ey7hkiIGZq2A/en-US/disney-mickey-mouse-red-deco-no-skid/dp/341646.json
+[12:02:41] Erroe on get product default: Traceback (most recent call last):
+  File "/home/noct/python-requests-chewy-v2/helpers.py", line 197, in get_product_general_info
+    return [detail_json['pageProps']['__APOLLO_STATE__'][product] for product in detail_json['pageProps']['__APOLLO_STATE__'] if "Product" in product][0]
+                                                                                 ~~~~~~~~~~~^^^^^^^^^^^^^
+TypeError: 'NoneType' object is not subscriptable
+
+[12:02:41] product_general_info None in json url: https://www.chewy.com/_next/data/chewy-pdp-ui-ey7hkiIGZq2A/en-US/oravet-hygiene-dental-chews-medium/dp/138431.json
+[12:04:28] products_links_list None with params {'groupResults': 'true', 'count': '36', 'include': 'items', 'fields[0]': 'PRODUCT_CARD_DETAILS', 'omitNullEntries': 'true', 'catalogId': '1004', 'from': '1908', 'sort': 'byRelevance', 'groupId': '977'}
+[12:09:03] products_links_list None with params {'groupResults': 'true', 'count': '36', 'include': 'items', 'fields[0]': 'PRODUCT_CARD_DETAILS', 'omitNullEntries': 'true', 'catalogId': '1004', 'from': '864', 'sort': 'byRelevance', 'groupId': '2515'}
+[12:10:24] detail_json None in json url: https://www.chewy.com/_next/data/chewy-pdp-ui-ey7hkiIGZq2A/en-US/sungrow-organic-catnip-treats-cat/dp/759558.json
+[12:10:42] Erroe on get product default: Traceback (most recent call last):
+  File "/home/noct/python-requests-chewy-v2/helpers.py", line 197, in get_product_general_info
+    return [detail_json['pageProps']['__APOLLO_STATE__'][product] for product in detail_json['pageProps']['__APOLLO_STATE__'] if "Product" in product][0]
+                                                                                 ~~~~~~~~~~~^^^^^^^^^^^^^
+TypeError: 'NoneType' object is not subscriptable
+
+[12:10:42] product_general_info None in json url: https://www.chewy.com/_next/data/chewy-pdp-ui-ey7hkiIGZq2A/en-US/sullivan-supply-performance-spandex/dp/348683.json
+[12:12:11] products_links_list None with params {'groupResults': 'true', 'count': '36', 'include': 'items', 'fields[0]': 'PRODUCT_CARD_DETAILS', 'omitNullEntries': 'true', 'catalogId': '1004', 'from': '3564', 'sort': 'byRelevance', 'groupId': '941'}
+[12:13:38] products_links_list None with params {'groupResults': 'true', 'count': '36', 'include': 'items', 'fields[0]': 'PRODUCT_CARD_DETAILS', 'omitNullEntries': 'true', 'catalogId': '1004', 'from': '3348', 'sort': 'byRelevance', 'groupId': '1663'}
+[12:13:47] products_links_list None with params {'groupResults': 'true', 'count': '36', 'include': 'items', 'fields[0]': 'PRODUCT_CARD_DETAILS', 'omitNullEntries': 'true', 'catalogId': '1004', 'from': '10008', 'sort': 'byRelevance', 'groupId': '288'}
+[12:13:52] products_links_list None with params {'groupResults': 'true', 'count': '36', 'include': 'items', 'fields[0]': 'PRODUCT_CARD_DETAILS', 'omitNullEntries': 'true', 'catalogId': '1004', 'from': '1584', 'sort': 'byRelevance', 'groupId': '8403'}
+[12:17:15] detail_json None in json url: https://www.chewy.com/_next/data/chewy-pdp-ui-ey7hkiIGZq2A/en-US/natures-way-bird-products-tray-bird/dp/817694.json
+[12:24:05] products_links_list None with params {'groupResults': 'true', 'count': '36', 'include': 'items', 'fields[0]': 'PRODUCT_CARD_DETAILS', 'omitNullEntries': 'true', 'catalogId': '1004', 'from': '2736', 'sort': 'byRelevance', 'groupId': '885'}
+[13:44:00] products_links_list None with params {'groupResults': 'true', 'count': '36', 'include': 'items', 'fields[0]': 'PRODUCT_CARD_DETAILS', 'omitNullEntries': 'true', 'catalogId': '1004', 'from': '10008', 'sort': 'byRelevance', 'groupId': '325'}

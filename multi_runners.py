@@ -62,10 +62,11 @@ line_done = set()
 def consolidate():
     headers = ['Status, Reference, Product Code,Sku,url,Product Name,Price,Stock,Breadcrumb,Shipping,Image,Brand,generic_name,product_form,drug_type,prescription_item,autoship,promotional_text,promotional_information:,pack_size,msrp,gtin\n']
     pets =  ['dog', 'cat', 'fish', 'bird', 'small-pet', 'reptile', 'horse', 'pharmacy', 'farm-animal']
-    for pet in pets:
-        f = open(f'{path}/{pet}_all.csv', "w")
-        f.writelines(headers)
-        f.close()
+    file_time = datetime.now().strftime("%y%m%d%H")
+
+    f = open(f'{path}/chewy_all_{file_time}.csv', "w")
+    f.writelines(headers)
+    f.close()
 
     for file in os.listdir(path):
         if '_chewy_' in file and file.endswith(".csv"):
@@ -74,13 +75,16 @@ def consolidate():
                 f = open(f'{path}/{file}')
                 lines = [l for l in f.read().split('\n') if l != '']
                 for line in lines:
-                    print(line)
                     if f'{pet}|{line}' not in line_done and 'generic_name' not in line:
                         line_done.add(f'{pet}|{line}')
-                        f_append = open(f'{pet}_all.csv', 'a')
+                        f_append = open(f'{path}/chewy_all_{file_time}.csv', 'a')
                         f_append.write(f'{line}\n')
                         f_append.close()
                 f.close()
+
+consolidate()
+
+exit(0)
 finished = False
 def run_command(command, wait):
    global reports, finished 
@@ -126,13 +130,13 @@ promo = re.sub("\n|\r", " ", f"{sub_header['sub_header']}").strip()
 
 
 for pet in ['dog', 'cat']:
-    pets = [['python', f'{path}/app.py', '-c', pet,  '-p',  f'{index*5}-{(index+1)*5}', '--sufix', sufix, '--promo', f"\"{promo}\"", '--proxy', proxies.pop()] for index in range(0,20)]
+    pets = [['python', f'{path}/app.py', '-c', pet,  '-p',  f'{index*2}-{(index+1)*2}', '--sufix', sufix, '--promo', f"\"{promo}\"", '--proxy', proxies.pop()] for index in range(0,50)]
     for pet in pets:
         commands.append(pet)
 
 
 for pet in ['pharmacy', 'fish', 'bird', 'small-pet', 'reptile', 'horse',  'farm-animal']:
-    pets = [['python', f'{path}/app.py', '-c', pet,  '-p',  f'{index*10}-{(index+1)*10}', '--sufix', sufix, '--promo', f"\"{promo}\"", '--proxy', proxies.pop()] for index in range(0,10)]
+    pets = [['python', f'{path}/app.py', '-c', pet,  '-p',  f'{index*5}-{(index+1)*5}', '--sufix', sufix, '--promo', f"\"{promo}\"", '--proxy', proxies.pop()] for index in range(0,20)]
     #for pet in pets:
     #    print(' '.join(pet))
     for pet in pets:

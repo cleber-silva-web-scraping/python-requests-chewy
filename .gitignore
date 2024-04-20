@@ -1,4 +1,9 @@
 .venv/
+.env/
 .DS_Store
 proxy.list
-*_chewy_*.csv
+*.csv
+*.log
+*.sh
+*pycache*
+
