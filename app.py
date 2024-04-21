@@ -51,7 +51,7 @@ params = {
     'groupId': '2515',
 }
 
-def main(category, perc, f_name, proxy, runner_data = None):
+def main(category_name, category, perc, f_name, proxy, runner_data = None):
     unique_products = 0
     error_products = 0
     variations_products = 0
@@ -338,7 +338,7 @@ def main(category, perc, f_name, proxy, runner_data = None):
                         'total': str(unique_products).rjust(5, "0"), 
                         'variations': str(variations_products).rjust(3, "0"), 
                         'errors': str(error_products).rjust(5, "0"), 
-                        'category': str(category).rjust(5, "0"), 
+                        'category': category_name, 
                         'page_init': str(pageInit).rjust(3, "0"), 
                         'page': str(i).rjust(3, "0"), 
                         'page_end': str(pageEnd).rjust(3, "0")
@@ -383,7 +383,7 @@ if __name__ == '__main__':
                 'price_is': float(args.price_is) * 1.0,
         }   
 
-    main(categories[args.category], args.percentage, f'{path}/{args.file}', args.proxy, data)
+    main(args.category[:3], categories[args.category], args.percentage, f'{path}/{args.file}', args.proxy, data)
 
     print("Start Time =", start_time)
     now = datetime.now()
