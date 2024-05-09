@@ -1,6 +1,9 @@
 # Web Scrapy for site: **https://www.chewy.com/**
 
 ### Get Start
+* Install **firefox-esr**
+  `$ sudo apt-get install firefox-esr`
+  
 * Clone the project
   `$ git clone https://github.com/cleber-silva-web-scraping/python-requests-chewy.git`
 
