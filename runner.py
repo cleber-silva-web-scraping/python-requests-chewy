@@ -12,7 +12,7 @@ path = '/'.join(__file__.split('/')[:-1])
 line_done = set()
 
 def consolidate():
-    headers = ['Product Code,Sku,url,Price,Shipping,Product Name,Stock,Breadcrumb,Image,Brand,generic_name,product_form,drug_type,prescription_item,autoship,promotional_text,promotional_information:,pack_size,msrp,gtin\n']
+    headers = ['Product Code,Sku,url,Price,Shipping,Product Name,Stock,Breadcrumb,Image,Brand,generic_name,product_form,drug_type,prescription_item,autoship,promotional_text,promotional_information,pack_size,msrp,gtin\n']
     pets =  ['dog', 'cat', 'fish', 'bird', 'small-pet', 'reptile', 'horse', 'pharmacy', 'farm-animal']
     file_time = datetime.now().strftime("%y%m%d%H")
 

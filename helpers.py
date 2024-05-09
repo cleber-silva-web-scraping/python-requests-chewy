@@ -35,7 +35,7 @@ def get_cookies(headers, proxy):
                 response = session.get('https://www.chewy.com/', headers=headers, timeout=26)
             cookies = { 'KP_UIDz-ssn': f"{response.cookies.get_dict()['KP_UIDz-ssn']};" }
             max_try = 0
-        except:
+        except Exception as e:
             time.sleep(3)
             max_try = max_try - 1
     display_time()
@@ -363,13 +363,17 @@ def useFirstTimeAutoshipDiscount(advertisedPrice, autoshipFirstTimeDiscountPerce
         return "%.2f" % discountedPrice
 
 def get_size(size_arr, atributes):
-    try:
         for attr in atributes:
-            id = attr['__ref'].split(':')[2].split(',')[0]
-            return size_arr[id]
-    except:
-        pass
-    return ''
+            try:
+                id = attr['__ref'].split('id":')[1].split(',')[0]
+                if int(id) > 0:
+                    if ":" in size_arr[id]:
+                        return f'{size_arr[id]}'.split(':')[1].strip()
+                    return size_arr[id].strip()
+            except: 
+                pass
+        return ''
+
 def get_sub_header():
     max_try = 5
     data = None

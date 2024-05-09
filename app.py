@@ -51,12 +51,11 @@ params = {
     'groupId': '2515',
 }
 
-def main(category_name, category, perc, f_name, proxy, runner_data = None):
+def main(category_name, category, perc, f_name, proxy, runner_data = {}):
     unique_products = 0
     error_products = 0
     variations_products = 0
-
-    if runner_data != None:
+    if runner_data != {}:
         sub_header = runner_data
         sufix = runner_data['sufix']
         min_price = runner_data['min_price']
@@ -105,6 +104,7 @@ def main(category_name, category, perc, f_name, proxy, runner_data = None):
     print('ALL DONE, STARTING CRAWLER NOW...\n\n')
 
     time.sleep(1)
+    print(f_name)
     with open(f_name, 'a') as f:
         for i in range(pageInit,pageEnd):
             params['from'] = f'{i * 36}'
@@ -270,7 +270,12 @@ def main(category_name, category, perc, f_name, proxy, runner_data = None):
                             data['isConflitPromo']  = isConflitPromo(data)
                             mapRestricted  = data['mapEnforced']  and data['mapSavings'] != None
                             data['mapRestricted'] = mapRestricted
-                            isFTASRepressedSku = int(data['partNumber']) in data['autoshipSuppressFTASList'] if data['autoshipSuppressFTASList'] != None else False
+
+                            try:
+                                isFTASRepressedSku = int(data['partNumber']) in data['autoshipSuppressFTASList'].split(',') if data['autoshipSuppressFTASList'] != None else False
+                            except:
+                                isFTASRepressedSku = False
+
                             data['isFTASRepressedSku'] = isFTASRepressedSku
 
                             display = True
