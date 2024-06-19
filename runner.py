@@ -6,6 +6,7 @@ from subprocess import PIPE, Popen
 from threading import Thread
 from datetime import datetime
 from helpers import get_path, get_sub_header
+import random
 
 reports = {}
 path = '/'.join(__file__.split('/')[:-1])
@@ -78,13 +79,12 @@ price_is = site_data['price_is']
 promo = re.sub("\n|\r", " ", f"{sub_header['sub_header']}").strip()
 
 for pet in ['dog', 'cat']:
-    pets = [['python', f'{path}/app.py', '--min_price', min_price, '--price_is', price_is, '-c', pet,  '-p',  f'{index*2}-{(index+1)*2}', '--sufix', sufix, '--promo', f"\"{promo}\"", '--proxy', proxies.pop()] for index in range(0,50)]
+    pets = [['python', f'{path}/app.py', '--min_price', min_price, '--price_is', price_is, '-c', pet,  '-p',  f'{index*2}-{(index+1)*2}', '--sufix', sufix, '--promo', f"\"{promo}\"", '--proxy', random.choice(proxies)] for index in range(0,50)]
     for pet in pets:
         commands.append(pet)
 
-
 for pet in ['pharmacy', 'fish', 'bird', 'small-pet', 'reptile', 'horse',  'farm-animal']:
-    pets = [['python', f'{path}/app.py', '--min_price', min_price, '--price_is', price_is, '-c', pet,  '-p',  f'{index*5}-{(index+1)*5}', '--sufix', sufix, '--promo', f"\"{promo}\"", '--proxy', proxies.pop()] for index in range(0,20)]
+    pets = [['python', f'{path}/app.py', '--min_price', min_price, '--price_is', price_is, '-c', pet,  '-p',  f'{index*5}-{(index+1)*5}', '--sufix', sufix, '--promo', f"\"{promo}\"", '--proxy', random.choice(proxies)] for index in range(0,20)]
     for pet in pets:
         commands.append(pet)
  

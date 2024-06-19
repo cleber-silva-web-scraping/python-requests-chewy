@@ -378,10 +378,15 @@ def get_sub_header():
     max_try = 5
     data = None
     while max_try > 0:
+        options = Options()
+        options.add_argument("--headless")
+        options.add_argument('--ignore-certificate-errors')
+        options.add_argument('--ignore-urlfetcher-cert-requests')
+        options.add_argument('--no-sandbox')
+        driver = webdriver.Chrome(options=options)
         try:
-            options = Options()
-            options.add_argument("--headless")
-            driver = webdriver.Firefox(options=options)
+            driver.get('https://www.chewy.com/')
+            time.sleep(5)
             driver.get('https://www.chewy.com/deals/todays-deals-2723')
             time.sleep(5)
             data = driver.find_element(By.XPATH,"//div[contains(@class,'__subtext__')]")
@@ -394,9 +399,12 @@ def get_sub_header():
                 'sub_header': data_text
             }
             max_try = 0
-        except:
+        except Exception as e:
+            time.sleep(1000)
             time.sleep(3)
             max_try = max_try -1
+        finally:
+            driver.quit()
 
     return data
 
